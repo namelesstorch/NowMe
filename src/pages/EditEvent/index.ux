@@ -1,0 +1,218 @@
+<template>
+  <div class="edit-wrap">
+    <div class="header">
+      <text class="back-btn" @click="back">取消</text>
+      <text class="page-title">{{isEdit ? '编辑日程' : '新建日程'}}</text>
+      <text class="save-btn" @click="saveEvent">保存</text>
+    </div>
+    <input class="input" placeholder="事件标题" value="{{title}}" @change="titleChange" />
+    <input class="input" placeholder="地点（可选）" value="{{location}}" @change="locationChange" />
+    
+    <div class="row">
+      <text class="label">开始：</text>
+      <input class="input small" placeholder="时" value="{{startHour}}" @change="startHourChange" />
+      <text>:</text>
+      <input class="input small" placeholder="分" value="{{startMinute}}" @change="startMinuteChange" />
+    </div>
+    <div class="row">
+      <text class="label">结束：</text>
+      <input class="input small" placeholder="时" value="{{endHour}}" @change="endHourChange" />
+      <text>:</text>
+      <input class="input small" placeholder="分" value="{{endMinute}}" @change="endMinuteChange" />
+    </div>
+    
+    <div class="row">
+      <text class="label">消费：</text>
+      <input class="input" placeholder="金额" value="{{amount}}" @change="amountChange" />
+    </div>
+    <div class="row">
+      <text class="label">项目：</text>
+      <input class="input" placeholder="类别" value="{{category}}" @change="categoryChange" />
+    </div>
+    
+    <div class="date-display">
+      <text>日期：{{date}}</text>
+    </div>
+    
+    <div class="delete-btn" if="{{isEdit}}" @click="deleteEvent">
+      <text>删除日程</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import prompt from '@system.prompt'
+
+export default {
+  data: {
+    id: '',
+    date: '',
+    startHour: 8,
+    startMinute: 0,
+    endHour: 9,
+    endMinute: 0,
+    title: '',
+    location: '',
+    amount: null,
+    category: '',
+    isEdit: false
+  },
+  onInit() {
+    storage.get({
+      key: 'tempEditEvent',
+      success: (value) => {
+        if (value) {
+          try {
+            const event = JSON.parse(value)
+            if (event) {
+              this.id = event.id || ''
+              this.date = event.date || ''
+              this.startHour = event.startHour || 8
+              this.startMinute = event.startMinute || 0
+              this.endHour = event.endHour || 9
+              this.endMinute = event.endMinute || 0
+              this.title = event.title || ''
+              this.location = event.location || ''
+              this.amount = event.amount || null
+              this.category = event.category || ''
+              this.isEdit = !!event.id
+            }
+          } catch(e) {}
+        }
+      },
+      fail: () => {}
+    })
+  },
+  titleChange(e) { this.title = e.value },
+  locationChange(e) { this.location = e.value },
+  startHourChange(e) { this.startHour = parseInt(e.value) || 0 },
+  startMinuteChange(e) { this.startMinute = parseInt(e.value) || 0 },
+  endHourChange(e) { this.endHour = parseInt(e.value) || 0 },
+  endMinuteChange(e) { this.endMinute = parseInt(e.value) || 0 },
+  amountChange(e) { this.amount = parseFloat(e.value) || null },
+  categoryChange(e) { this.category = e.value },
+  
+  back() {
+    // 方法一：router.back()
+    // 若上一页存在（Demo页），直接返回
+    router.back()
+    
+    // 兜底：如果 back 无效，0.3 秒后强制跳转
+    setTimeout(() => {
+      router.replace({ uri: 'pages/Demo' })
+    }, 300)
+  },
+  
+  saveEvent() {
+    if (!this.title.trim()) {
+      prompt.showToast({ message: '请输入事件标题' })
+      return
+    }
+    
+    const newEvent = {
+      id: this.id || Date.now().toString(),
+      date: this.date,
+      startHour: this.startHour,
+      startMinute: this.startMinute,
+      endHour: this.endHour,
+      endMinute: this.endMinute,
+      title: this.title,
+      location: this.location,
+      amount: this.amount,
+      category: this.category
+    }
+    
+    storage.get({
+      key: 'events',
+      success: (value) => {
+        let events = []
+        if (value) {
+          try { events = JSON.parse(value) || [] } catch(e) {}
+        }
+        if (this.isEdit) {
+          const index = events.findIndex(e => e.id === newEvent.id)
+          if (index > -1) {
+            newEvent.color = events[index].color || this.randomColor()
+            events.splice(index, 1, newEvent)
+          }
+        } else {
+          newEvent.color = this.randomColor()
+          events.push(newEvent)
+        }
+        storage.set({
+          key: 'events',
+          value: JSON.stringify(events),
+          success: () => {
+            router.back()
+            setTimeout(() => {
+              router.replace({ uri: 'pages/Demo' })
+            }, 300)
+          }
+        })
+      },
+      fail: () => {
+        // 无数据时首次保存
+        newEvent.color = this.randomColor()
+        storage.set({
+          key: 'events',
+          value: JSON.stringify([newEvent]),
+          success: () => {
+            router.back()
+            setTimeout(() => {
+              router.replace({ uri: 'pages/Demo' })
+            }, 300)
+          }
+        })
+      }
+    })
+  },
+  
+  deleteEvent() {
+    storage.get({
+      key: 'events',
+      success: (value) => {
+        let events = []
+        if (value) {
+          try { events = JSON.parse(value) || [] } catch(e) {}
+        }
+        const index = events.findIndex(e => e.id === this.id)
+        if (index > -1) {
+          events.splice(index, 1)
+        }
+        storage.set({
+          key: 'events',
+          value: JSON.stringify(events),
+          success: () => {
+            router.back()
+            setTimeout(() => {
+              router.replace({ uri: 'pages/Demo' })
+            }, 300)
+          }
+        })
+      }
+    })
+  },
+  
+  randomColor() {
+    const colors = ['#4CAF50','#2196F3','#FF9800','#E91E63','#9C27B0']
+    return colors[Math.floor(Math.random() * colors.length)]
+  }
+}
+</script>
+
+<style>
+.edit-wrap { flex: 1; flex-direction: column; background-color: #fff; padding: 20px; }
+.header { flex-direction: row; justify-content: space-between; align-items: center; height: 80px; margin-bottom: 20px; }
+.back-btn, .save-btn { font-size: 30px; color: #0f8de8; }
+.page-title { font-size: 32px; font-weight: bold; }
+.input { padding: 15px; border: 1px solid #ddd; border-radius: 10px; margin: 10px 0; font-size: 28px; }
+.small { width: 100px; text-align: center; }
+.row { flex-direction: row; align-items: center; margin: 10px 0; }
+.label { font-size: 26px; width: 120px; text-align: right; margin-right: 10px; }
+.date-display { margin: 20px 0; }
+.date-display text { font-size: 26px; color: #666; }
+.delete-btn { margin-top: 40px; padding: 20px; background-color: #e53935; border-radius: 10px; align-items: center; justify-content: center; }
+.delete-btn text { color: white; font-size: 28px; }
+</style>

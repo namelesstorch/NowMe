@@ -1,0 +1,181 @@
+<template>
+  <div class="calendar">
+    <div class="header">
+      <div class="arrow" @click="prevWeek"><text>‹</text></div>
+      <text class="week-title">{{weekRangeText}}</text>
+      <div class="arrow" @click="nextWeek"><text>›</text></div>
+    </div>
+
+    <div class="row header-row">
+      <div class="time-label"><text>时间</text></div>
+      <div 
+        for="{{(dayIndex, day) in weekDays}}" 
+        class="day-col {{expandedCol === dayIndex ? 'day-col-expanded' : ''}}" 
+        @click="expandCol(dayIndex)">
+        <text class="day-name">{{day.name}}</text>
+        <text class="day-date">{{day.dateStr}}</text>
+      </div>
+    </div>
+
+    <div for="{{hour in hours}}" class="row">
+      <div class="time-label"><text>{{hour.label}}</text></div>
+      <div 
+        for="{{(dayIndex, day) in weekDays}}" 
+        class="day-col {{expandedCol === dayIndex ? 'day-col-expanded' : ''}} cell" 
+        style="background-color: {{getEvents(day.fullDate, hour.value).length ? '#F1F8E9' : '#FFFFFF'}}"
+        @click="cellClick(day.fullDate, hour.value)">
+        <div 
+          for="{{event in getEvents(day.fullDate, hour.value)}}" 
+          class="event-item" 
+          style="background-color: {{event.color}}"
+          @click="editEvent(event)">
+          <text class="event-title">{{event.title}}</text>
+          <text class="event-location" if="{{event.location}}">📍{{event.location}}</text>
+          <text class="event-amount" if="{{event.amount}}">¥{{event.amount}}</text>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+
+
+export default {
+  props: ['events'],
+  data: {
+    currentWeekStart: '',
+    weekDays: [],
+    weekRangeText: '',
+    hours: [],
+    expandedCol: -1
+  },
+  onInit() {
+    this.buildHours()
+    this.computeCurrentWeek()
+  },
+  buildHours() {
+    this.hours = Array.from({length: 24}, (_, i) => ({
+      label: `${i.toString().padStart(2, '0')}:00`,
+      value: i
+    }))
+  },
+  computeCurrentWeek() {
+    const now = new Date()
+    const dayOfWeek = now.getDay()
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7))
+    this.currentWeekStart = this.formatDate(monday)
+    this.buildWeekDays()
+  },
+  formatDate(date) {
+    const y = date.getFullYear()
+    const m = (date.getMonth() + 1).toString().padStart(2, '0')
+    const d = date.getDate().toString().padStart(2, '0')
+    return `${y}-${m}-${d}`
+  },
+  buildWeekDays() {
+    const startDate = new Date(this.currentWeekStart)
+    const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    this.weekDays = []
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startDate)
+      date.setDate(startDate.getDate() + i)
+      const fullDate = this.formatDate(date)
+      this.weekDays.push({
+        name: dayNames[i],
+        fullDate: fullDate,
+        dateStr: `${(date.getMonth()+1).toString().padStart(2,'0')}.${date.getDate().toString().padStart(2,'0')}`
+      })
+    }
+    if (this.weekDays.length) {
+      this.weekRangeText = `${this.weekDays[0].dateStr} - ${this.weekDays[6].dateStr}`
+    }
+  },
+  prevWeek() {
+    const start = new Date(this.currentWeekStart)
+    start.setDate(start.getDate() - 7)
+    this.currentWeekStart = this.formatDate(start)
+    this.buildWeekDays()
+  },
+  nextWeek() {
+    const start = new Date(this.currentWeekStart)
+    start.setDate(start.getDate() + 7)
+    this.currentWeekStart = this.formatDate(start)
+    this.buildWeekDays()
+  },
+  expandCol(index) {
+    this.expandedCol = this.expandedCol === index ? -1 : index
+  },
+  cellClick(date, hour) {
+  // 将新建日程的默认值存入临时 key
+    const defaultEvent = {
+      id: '',
+      date: date,
+      startHour: hour,
+      startMinute: 0,
+      endHour: hour + 1,
+      endMinute: 0,
+      title: '',
+      location: '',
+      amount: null,
+      category: '',
+      color: ''
+    }
+    storage.set({
+      key: 'tempEditEvent',
+      value: JSON.stringify(defaultEvent),
+      success: () => {
+        router.push({ uri: 'pages/EditEvent' })
+      },
+      fail: () => {
+        // 如果 storage 失败也尝试跳转（编辑页面会自行处理）
+        router.push({ uri: 'pages/EditEvent' })
+      }
+    })
+  },
+  getEvents(date, hour) {
+    return this.events.filter(e => {
+      if (e.date !== date) return false
+      const start = e.startHour + (e.startMinute || 0) / 60
+      const end = e.endHour + (e.endMinute || 0) / 60
+      return hour >= Math.floor(start) && hour < Math.ceil(end)
+    })
+  },
+  editEvent(event) {
+   // 将要编辑的事件对象存入临时 key
+    storage.set({
+      key: 'tempEditEvent',
+      value: JSON.stringify(event),
+      success: () => {
+        router.push({ uri: 'pages/EditEvent' })
+      },
+      fail: () => {
+        router.push({ uri: 'pages/EditEvent' })
+      }
+    })
+  }
+}
+</script>
+
+<style>
+.calendar { flex: 1; flex-direction: column; background-color: #fff; }
+.header { height: 80px; flex-direction: row; align-items: center; justify-content: center; border-bottom: 1px solid #ddd; }
+.arrow { padding: 20px; }
+.arrow text { font-size: 40px; color: #0f8de8; }
+.week-title { font-size: 30px; font-weight: bold; }
+.header-row { height: 80px; background-color: #fafafa; }
+.row { flex-direction: row; min-height: 60px; border-bottom: 1px solid #eee; }
+.time-label { width: 100px; align-items: center; justify-content: center; border-right: 1px solid #eee; background-color: #f9f9f9; }
+.time-label text { font-size: 22px; color: #333; }
+.day-col { flex: 1; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #eee; padding: 2px; }
+.day-col-expanded { flex: 2; }
+.day-name { font-size: 24px; font-weight: bold; }
+.day-date { font-size: 20px; color: #999; }
+.cell { min-height: 60px; align-items: stretch; }
+.event-item { margin: 1px 2px; padding: 4px 6px; border-radius: 4px; flex-direction: column; }
+.event-title { font-size: 22px; color: white; }
+.event-location, .event-amount { font-size: 18px; color: white; }
+</style>

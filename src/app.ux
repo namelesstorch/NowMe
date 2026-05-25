@@ -1,0 +1,18 @@
+<!-- 
+  Copyright (c) 2021-present, the hapjs-platform Project Contributors
+  SPDX-License-Identifier: Apache-2.0
+-->
+<script>
+export default {
+  onCreate() {
+    console.info('智能日程表启动')
+  },
+  onDestroy() {
+    console.info('应用退出')
+  }
+}
+</script>
+
+
+
+

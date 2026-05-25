@@ -1,0 +1,98 @@
+<template>
+  <div class="accounting">
+    <text class="title">记账本</text>
+    <div class="summary">
+      <text class="total-label">本月支出</text>
+      <text class="total-amount">¥{{monthlyTotal}}</text>
+    </div>
+    <div class="list">
+      <div for="{{item in filteredEvents}}" class="list-item">
+        <div class="item-row">
+          <text class="item-date">{{item.date}}</text>
+          <text class="item-title">{{item.title}}</text>
+          <text class="item-amount">-¥{{item.amount}}</text>
+          <text class="item-category">{{item.category || '其他'}}</text>
+        </div>
+      </div>
+    </div>
+    <div class="empty" if="{{filteredEvents.length === 0}}">
+      <text>暂无消费记录</text>
+      <text class="sub">在日程中添加金额即可自动记账</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import storage from '@system.storage'
+
+export default {
+  // 不再依赖 props，改为自己读取
+  props: [],
+  data: {
+    monthlyTotal: 0,
+    filteredEvents: []
+  },
+  onInit() {
+    this.loadData()
+  },
+  onShow() {
+    // 每次 attached 时重新加载（快应用中 tab 切换时会触发 onShow）
+    this.loadData()
+  },
+  loadData() {
+    storage.get({
+      key: 'events',
+      success: (value) => {
+        let events = []
+        if (value) {
+          try {
+            events = JSON.parse(value) || []
+          } catch(e) {}
+        }
+        this.processEvents(events)
+      },
+      fail: () => {
+        this.filteredEvents = []
+        this.monthlyTotal = 0
+      }
+    })
+  },
+  processEvents(events) {
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    
+    this.filteredEvents = events
+      .filter(e => e.amount && e.amount > 0)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      
+    this.monthlyTotal = events
+      .filter(e => {
+        if (!e.amount) return false
+        const d = new Date(e.date)
+        return d.getFullYear() === currentYear && d.getMonth() === currentMonth
+      })
+      .reduce((sum, e) => sum + (e.amount || 0), 0)
+      .toFixed(2)
+  }
+}
+</script>
+
+<style>
+/* 样式保持不变，此处省略 */
+.accounting { flex: 1; flex-direction: column; padding: 20px; background-color: #fff; }
+.title { font-size: 36px; font-weight: bold; margin-bottom: 15px; }
+.summary { flex-direction: row; justify-content: space-between; align-items: center; padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 12px; margin-bottom: 20px; }
+.total-label { font-size: 28px; color: rgba(255,255,255,0.9); }
+.total-amount { font-size: 40px; color: #fff; font-weight: bold; }
+.list { flex: 1; }
+.list-item { padding: 15px; border-bottom: 1px solid #f0f0f0; }
+.item-row { flex-direction: row; align-items: center; justify-content: space-between; }
+.item-date { font-size: 22px; color: #888; width: 130px; }
+.item-title { font-size: 26px; flex: 1; color: #333; }
+.item-amount { font-size: 26px; color: #e53935; width: 120px; text-align: right; font-weight: bold; }
+.item-category { font-size: 22px; color: #999; width: 100px; text-align: center; background-color: #f0f0f0; border-radius: 10px; padding: 4px 0; }
+.empty { flex: 1; justify-content: center; align-items: center; }
+.empty text { font-size: 28px; color: #999; }
+.sub { font-size: 24px; color: #bbb; margin-top: 10px; }
+</style>

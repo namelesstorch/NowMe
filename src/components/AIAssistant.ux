@@ -1,0 +1,180 @@
+<template>
+  <div class="ai-assistant">
+    <text class="title">AI 助手</text>
+    
+    <list class="chat-area">
+      <list-item for="{{msg in messages}}" class="message-wrapper {{msg.type === 'user' ? 'msg-right' : 'msg-left'}}">
+        <div class="bubble {{msg.type === 'user' ? 'user-msg' : 'ai-msg'}}">
+          <text>{{msg.text}}</text>
+        </div>
+      </list-item>
+    </list>
+
+    <div class="input-area">
+      <input 
+        class="text-input" 
+        placeholder="说出你的日程，如“明天下午3点去超市”" 
+        value="{{inputText}}" 
+        @change="textChange" />
+      <div class="btn-group">
+        <div class="icon-btn" @click="startVoice"><text>🎤</text></div>
+        <div class="icon-btn" @click="pickImage"><text>📷</text></div>
+        <div class="send-btn" @click="analyzeText"><text>提取日程</text></div>
+        <div class="send-btn" @click="getAdvice"><text>智能建议</text></div>
+      </div>
+    </div>
+
+    <div class="recording" if="{{recording}}">
+      <text>正在录音...</text>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  props: ['events'],
+  data: {
+    inputText: '',
+    messages: [],
+    recording: false
+  },
+  textChange(e) {
+    this.inputText = e.value
+  },
+  analyzeText() {
+    if (!this.inputText.trim()) return
+    this.messages.push({ type: 'user', text: this.inputText })
+    const extracted = this.mockExtractEvent(this.inputText)
+    if (extracted) {
+      this.messages.push({ 
+        type: 'ai', 
+        text: `识别日程：${extracted.title}，时间：${extracted.date} ${extracted.startHour}:00，地点：${extracted.location || '无'}` 
+      })
+      this.$emit('addEvent', extracted)
+      this.messages.push({ type: 'ai', text: '✅ 已自动添加到日程表' })
+    } else {
+      this.messages.push({ type: 'ai', text: '未能识别日程信息，请尝试更具体的描述' })
+    }
+    this.inputText = ''
+  },
+  mockExtractEvent(text) {
+    const dateMatch = text.match(/(今天|明天|后天|\d{1,2}月\d{1,2}日)/)
+    let date = ''
+    const today = new Date()
+    if (dateMatch) {
+      switch (dateMatch[1]) {
+        case '今天': date = this.formatDate(today); break
+        case '明天': 
+          const d1 = new Date(today); d1.setDate(d1.getDate()+1); 
+          date = this.formatDate(d1); break
+        case '后天':
+          const d2 = new Date(today); d2.setDate(d2.getDate()+2);
+          date = this.formatDate(d2); break
+        default:
+          const [m, d] = dateMatch[1].replace('日','').split('月')
+          date = `${today.getFullYear()}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`
+      }
+    } else {
+      date = this.formatDate(today)
+    }
+    const timeMatch = text.match(/下午(\d{1,2})点|(\d{1,2})点/)
+    let startHour = timeMatch ? parseInt(timeMatch[1] || timeMatch[2]) : 8
+    if (text.includes('下午') && startHour < 12) startHour += 12
+    const title = text.replace(/(今天|明天|后天|几点|在|去|下午|上午)/g, '').trim() || '未命名事件'
+    let location = ''
+    const locMatch = text.match(/在(.+?)(?:开会|吃饭|购物|见面|哦|吧)/)
+    if (locMatch) location = locMatch[1]
+    
+    return {
+      date,
+      startHour,
+      startMinute: 0,
+      endHour: startHour + 1,
+      endMinute: 0,
+      title,
+      location,
+      amount: null,
+      category: ''
+    }
+  },
+  getAdvice() {
+    this.messages.push({ type: 'user', text: '分析我的日程' })
+    if (this.events.length === 0) {
+      this.messages.push({ type: 'ai', text: '当前没有日程，无法给出建议。' })
+      return
+    }
+    const conflicts = []
+    for (let i = 0; i < this.events.length; i++) {
+      for (let j = i+1; j < this.events.length; j++) {
+        const a = this.events[i], b = this.events[j]
+        if (a.date === b.date) {
+          const aStart = a.startHour + (a.startMinute||0)/60
+          const aEnd = a.endHour + (a.endMinute||0)/60
+          const bStart = b.startHour + (b.startMinute||0)/60
+          const bEnd = b.endHour + (b.endMinute||0)/60
+          if (aStart < bEnd && bStart < aEnd) {
+            conflicts.push(`${a.title} 与 ${b.title} 在 ${a.date} 时间重叠`)
+          }
+        }
+      }
+    }
+    const advice = conflicts.length 
+      ? '⚠️ 发现时间冲突：\n' + conflicts.join('\n') + '\n建议调整时间安排。'
+      : '✅ 当前日程安排合理，没有冲突。继续保持！'
+    this.messages.push({ type: 'ai', text: advice })
+  },
+  startVoice() {
+    this.recording = true
+    setTimeout(() => {
+      this.recording = false
+      this.messages.push({ type: 'user', text: '[语音输入]' })
+      this.messages.push({ type: 'ai', text: '识别文本：明天下午3点去超市' })
+      this.inputText = '明天下午3点去超市'
+      this.analyzeText()
+    }, 1500)
+  },
+  pickImage() {
+    this.messages.push({ type: 'ai', text: '图像识别功能暂未开启' })
+  },
+  formatDate(date) {
+    const y = date.getFullYear()
+    const m = (date.getMonth()+1).toString().padStart(2,'0')
+    const d = date.getDate().toString().padStart(2,'0')
+    return `${y}-${m}-${d}`
+  }
+}
+</script>
+
+<style>
+.ai-assistant { flex: 1; flex-direction: column; padding: 20px; background-color: #fff; }
+.title { font-size: 36px; font-weight: bold; margin-bottom: 10px; }
+
+.chat-area { flex: 1; flex-direction: column; background-color: #f5f5f5; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+.message-wrapper {
+  width: 100%;
+  flex-direction: row;
+  margin: 8px 0;
+  padding: 0;              /* 移除 list-item 可能存在的内边距 */
+  border-bottom: none;     /* 移除 list-item 可能存在的分割线 */
+}
+
+.msg-left { justify-content: flex-start; }
+.msg-right { justify-content: flex-end; }
+
+.bubble { max-width: 75%; padding: 15px 20px; border-radius: 20px; }
+.user-msg { background-color: #0f8de8; border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-right-radius: 0px; border-bottom-left-radius: 20px; }
+.ai-msg { background-color: #e0e0e0; border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-right-radius: 20px; border-bottom-left-radius: 0px; }
+
+.bubble text { font-size: 26px; color: #fff; }
+.ai-msg text { color: #333; }
+
+.input-area { flex-direction: column; }
+.text-input { padding: 15px; border: 1px solid #ddd; border-radius: 25px; margin-bottom: 15px; font-size: 26px; background-color: #f9f9f9; }
+.btn-group { flex-direction: row; justify-content: space-around; align-items: center; }
+.icon-btn { width: 70px; height: 70px; border-radius: 35px; background-color: #f0f0f0; justify-content: center; align-items: center; border: 1px solid #ddd; }
+.icon-btn text { font-size: 36px; }
+.send-btn { padding: 15px 20px; border-radius: 25px; background-color: #0f8de8; }
+.send-btn text { color: white; font-size: 24px; }
+.recording { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+.recording text { color: white; font-size: 30px; }
+</style>
