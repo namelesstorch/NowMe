@@ -1,0 +1,179 @@
+<template>
+  <div class="month-view">
+    <!-- 头部月份切换 -->
+    <div class="header">
+      <div class="arrow" @click="prevMonth"><text>‹</text></div>
+      <text class="month-title">{{year}}年{{month+1}}月</text>
+      <div class="arrow" @click="nextMonth"><text>›</text></div>
+    </div>
+
+    <!-- 星期标题 -->
+    <div class="week-header">
+      <text class="weekday" for="{{day in weekDays}}">{{day}}</text>
+    </div>
+
+    <!-- 日期网格 -->
+    <div class="days-grid">
+      <!-- 填充前面的空白 -->
+      <div class="day-cell" for="{{i in (0..firstDayOfWeek-1)}}">
+        <text class="day-num"></text>
+      </div>
+
+      <!-- 日期单元格 -->
+      <div class="day-cell" for="{{day in daysInMonth}}">
+        <text class="day-num">{{day}}</text>
+        <div class="event-list">
+          <div for="{{event in getEventsForDay(day)}}">
+            <text class="event-dot">●</text>
+            <text class="event-title">{{event.title}}</text>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+
+export default {
+  data: {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+    weekDays: ['一', '二', '三', '四', '五', '六', '日'],
+    daysInMonth: 0,
+    firstDayOfWeek: 0,
+    events: []
+  },
+  onInit() {
+    this.loadEvents()
+    this.calcDateInfo()
+  },
+  loadEvents() {
+    storage.get({
+      key: 'events',
+      success: (value) => {
+        if (value) {
+          try {
+            this.events = JSON.parse(value) || []
+          } catch(e) {}
+        }
+      },
+      fail: () => {}
+    })
+  },
+  calcDateInfo() {
+    const firstDate = new Date(this.year, this.month, 1)
+    // 快应用中 getDay() 返回 0-6，0=周日，但我们的周一是第一天
+    let dayOfWeek = firstDate.getDay()
+    // 调整为周一为0，周日为6
+    this.firstDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    
+    // 当月总天数
+    const nextMonthDate = new Date(this.year, this.month + 1, 1)
+    nextMonthDate.setDate(nextMonthDate.getDate() - 1)
+    this.daysInMonth = nextMonthDate.getDate()
+  },
+  prevMonth() {
+    if (this.month === 0) {
+      this.year -= 1
+      this.month = 11
+    } else {
+      this.month -= 1
+    }
+    this.calcDateInfo()
+  },
+  nextMonth() {
+    if (this.month === 11) {
+      this.year += 1
+      this.month = 0
+    } else {
+      this.month += 1
+    }
+    this.calcDateInfo()
+  },
+  getEventsForDay(day) {
+    const dateStr = `${this.year}-${(this.month+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`
+    return this.events.filter(e => e.date === dateStr)
+  }
+}
+</script>
+
+<style>
+.month-view {
+  flex: 1;
+  flex-direction: column;
+  background-color: #fff;
+  padding: 10px;
+}
+
+.header {
+  height: 80px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #ddd;
+}
+
+.arrow {
+  padding: 20px;
+}
+.arrow text {
+  font-size: 40px;
+  color: #0f8de8;
+}
+.month-title {
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.week-header {
+  flex-direction: row;
+  height: 60px;
+  border-bottom: 1px solid #eee;
+}
+
+.weekday {
+  flex: 1;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #666;
+}
+
+.days-grid {
+  flex: 1;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.day-cell {
+  width: 14.28%;
+  height: 80px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  border-bottom: 1px solid #f0f0f0;
+  border-right: 1px solid #f0f0f0;
+  padding: 2px;
+}
+
+.day-num {
+  font-size: 24px;
+  margin: 4px 0;
+  color: #333;
+}
+
+.event-dot {
+  font-size: 14px;
+  color: #0f8de8;
+  margin-right: 2px;
+}
+
+.event-title {
+  font-size: 18px;
+  color: #333;
+  max-width: 90%;
+}
+</style>

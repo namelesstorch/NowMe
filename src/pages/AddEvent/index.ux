@@ -1,11 +1,15 @@
 <template>
-  <div class="edit-wrap">
-    <!-- 顶部只留标题 -->
+  <div class="add-wrap">
     <div class="top-title">
-      <text class="page-title">{{isEdit ? '编辑日程' : '新建日程'}}</text>
+      <text class="page-title">添加日程</text>
     </div>
 
-    <!-- 表单内容（与原版完全一致） -->
+    <!-- 日期输入（可修改） -->
+    <div class="row">
+      <text class="label">日期：</text>
+      <input class="input" placeholder="YYYY-MM-DD" value="{{date}}" @change="dateChange" />
+    </div>
+
     <input class="input" placeholder="事件标题" value="{{title}}" @change="titleChange" />
     <input class="input" placeholder="地点（可选）" value="{{location}}" @change="locationChange" />
     
@@ -31,16 +35,7 @@
       <input class="input" placeholder="类别" value="{{category}}" @change="categoryChange" />
     </div>
     
-    <div class="date-display">
-      <text>日期：{{date}}</text>
-    </div>
-    
-    <!-- 删除按钮（仅在编辑时显示）位置不变 -->
-    <div class="delete-btn" if="{{isEdit}}" @click="deleteEvent">
-      <text>删除日程</text>
-    </div>
-
-    <!-- 底部操作栏（原来在顶部的按钮移到这里） -->
+    <!-- 底部按钮（取消 / 保存） -->
     <div class="bottom-bar">
       <div class="btn btn-cancel" @click="back"><text>取消</text></div>
       <div class="btn btn-save" @click="saveEvent"><text>保存</text></div>
@@ -68,6 +63,7 @@ export default {
     isEdit: false
   },
   onInit() {
+    // 尝试从临时存储读取默认值（来自日历传递的默认日期）
     storage.get({
       key: 'tempEditEvent',
       success: (value) => {
@@ -93,6 +89,7 @@ export default {
       fail: () => {}
     })
   },
+  dateChange(e) { this.date = e.value },
   titleChange(e) { this.title = e.value },
   locationChange(e) { this.location = e.value },
   startHourChange(e) { this.startHour = parseInt(e.value) || 0 },
@@ -114,9 +111,14 @@ export default {
       prompt.showToast({ message: '请输入事件标题' })
       return
     }
+    // 简易日期格式验证
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(this.date)) {
+      prompt.showToast({ message: '日期格式错误，请输入 YYYY-MM-DD' })
+      return
+    }
     
     const newEvent = {
-      id: this.id || Date.now().toString(),
+      id: Date.now().toString(),  // 强制新建，忽略可能存在的 id
       date: this.date,
       startHour: this.startHour,
       startMinute: this.startMinute,
@@ -135,16 +137,8 @@ export default {
         if (value) {
           try { events = JSON.parse(value) || [] } catch(e) {}
         }
-        if (this.isEdit) {
-          const index = events.findIndex(e => e.id === newEvent.id)
-          if (index > -1) {
-            newEvent.color = events[index].color || this.randomColor()
-            events.splice(index, 1, newEvent)
-          }
-        } else {
-          newEvent.color = this.randomColor()
-          events.push(newEvent)
-        }
+        newEvent.color = this.randomColor()
+        events.push(newEvent)
         storage.set({
           key: 'events',
           value: JSON.stringify(events),
@@ -172,32 +166,6 @@ export default {
     })
   },
   
-  deleteEvent() {
-    storage.get({
-      key: 'events',
-      success: (value) => {
-        let events = []
-        if (value) {
-          try { events = JSON.parse(value) || [] } catch(e) {}
-        }
-        const index = events.findIndex(e => e.id === this.id)
-        if (index > -1) {
-          events.splice(index, 1)
-        }
-        storage.set({
-          key: 'events',
-          value: JSON.stringify(events),
-          success: () => {
-            router.back()
-            setTimeout(() => {
-              router.replace({ uri: 'pages/Demo' })
-            }, 300)
-          }
-        })
-      }
-    })
-  },
-  
   randomColor() {
     const colors = ['#4CAF50','#2196F3','#FF9800','#E91E63','#9C27B0']
     return colors[Math.floor(Math.random() * colors.length)]
@@ -206,28 +174,22 @@ export default {
 </script>
 
 <style>
-.edit-wrap {
+.add-wrap {
   flex: 1;
   flex-direction: column;
   background-color: #fff;
   padding: 20px;
-  /* 需为底部栏留出空间，不采用固定高度，而是让内容滚动 */
 }
-
-/* 顶部标题（原 header 部分仅保留标题文本） */
 .top-title {
   height: 80px;
   justify-content: center;
   align-items: center;
   margin-bottom: 20px;
 }
-
 .page-title {
   font-size: 32px;
   font-weight: bold;
 }
-
-/* 表单元素样式保持原样 */
 .input {
   padding: 15px;
   border: 1px solid #ddd;
@@ -235,18 +197,15 @@ export default {
   margin: 10px 0;
   font-size: 28px;
 }
-
 .small {
   width: 100px;
   text-align: center;
 }
-
 .row {
   flex-direction: row;
   align-items: center;
   margin: 10px 0;
 }
-
 .label {
   font-size: 26px;
   width: 120px;
@@ -254,31 +213,6 @@ export default {
   margin-right: 10px;
 }
 
-.date-display {
-  margin: 20px 0;
-}
-
-.date-display text {
-  font-size: 26px;
-  color: #666;
-}
-
-.delete-btn {
-  margin-top: 30px;
-  margin-bottom: 20px; /* 与底部栏拉开距离 */
-  padding: 20px;
-  background-color: #e53935;
-  border-radius: 10px;
-  align-items: center;
-  justify-content: center;
-}
-
-.delete-btn text {
-  color: white;
-  font-size: 28px;
-}
-
-/* 底部栏（与顶部栏风格一致，但固定在底部） */
 .bottom-bar {
   flex-direction: row;
   justify-content: space-around;
@@ -287,9 +221,12 @@ export default {
   padding-bottom: 10px;
   border-top: 1px solid #e0e0e0;
   background-color: #ffffff;
-  /* 由于整体使用 flex 列布局，底部栏自然位于页面最下方 */
+  /* 紧贴底部 */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
-
 .btn {
   width: 280px;
   height: 70px;
@@ -297,20 +234,16 @@ export default {
   justify-content: center;
   align-items: center;
 }
-
 .btn-cancel {
   background-color: #e0e0e0;
 }
-
 .btn-cancel text {
   font-size: 28px;
   color: #333;
 }
-
 .btn-save {
   background-color: #0f8de8;
 }
-
 .btn-save text {
   font-size: 28px;
   color: #ffffff;
