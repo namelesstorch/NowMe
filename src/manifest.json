@@ -22,7 +22,9 @@
     "entry": "pages/Demo",
     "pages": {
       "pages/Demo":{"component": "index"},
-      "pages/EditEvent":{"component": "index"}
+      "pages/EditEvent":{"component": "index"},
+      "pages/AddEvent": { "component": "index" },
+      "pages/MonthView": { "component": "index" }
     }
   }
 }

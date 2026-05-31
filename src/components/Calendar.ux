@@ -1,11 +1,19 @@
 <template>
   <div class="calendar">
+    <!-- 头部：功能按钮 + 周切换 -->
     <div class="header">
-      <div class="arrow" @click="prevWeek"><text>‹</text></div>
+      <div class="left-section">
+        <div class="icon-btn" @click="addEvent"><text>➕</text></div>
+        <div class="icon-btn" @click="switchToMonth"><text>📅</text></div>
+        <div class="arrow" @click="prevWeek"><text>‹</text></div>
+      </div>
       <text class="week-title">{{weekRangeText}}</text>
-      <div class="arrow" @click="nextWeek"><text>›</text></div>
+      <div class="right-section">
+        <div class="arrow" @click="nextWeek"><text>›</text></div>
+      </div>
     </div>
 
+    <!-- 表头：星期与日期 -->
     <div class="row header-row">
       <div class="time-label"><text>时间</text></div>
       <div 
@@ -17,24 +25,26 @@
       </div>
     </div>
 
-    <div for="{{hour in hours}}" class="row">
-      <div class="time-label"><text>{{hour.label}}</text></div>
-      <div 
-        for="{{(dayIndex, day) in weekDays}}" 
-        class="day-col {{expandedCol === dayIndex ? 'day-col-expanded' : ''}} cell" 
-        style="background-color: {{getEvents(day.fullDate, hour.value).length ? '#F1F8E9' : '#FFFFFF'}}"
-        @click="cellClick(day.fullDate, hour.value)">
+    <!-- 可滚动的时间列表 -->
+    <list id="timeList" class="time-list">
+      <list-item for="{{hour in hours}}" class="row">
+        <div class="time-label"><text>{{hour.label}}</text></div>
         <div 
-          for="{{event in getEvents(day.fullDate, hour.value)}}" 
-          class="event-item" 
-          style="background-color: {{event.color}}"
-          @click="editEvent(event)">
-          <text class="event-title">{{event.title}}</text>
-          <text class="event-location" if="{{event.location}}">📍{{event.location}}</text>
-          <text class="event-amount" if="{{event.amount}}">¥{{event.amount}}</text>
+          for="{{(dayIndex, day) in weekDays}}" 
+          class="day-col {{expandedCol === dayIndex ? 'day-col-expanded' : ''}} cell" 
+          style="background-color: {{getEvents(day.fullDate, hour.value).length ? '#F1F8E9' : '#FFFFFF'}}"
+          @click="cellClick(day.fullDate, hour.value)">
+          <div 
+            for="{{event in getEvents(day.fullDate, hour.value)}}" 
+            class="event-item" 
+            style="background-color: {{event.color}}">
+            <text class="event-title">{{event.title}}</text>
+            <text class="event-location" if="{{event.location}}">📍{{event.location}}</text>
+            <text class="event-amount" if="{{event.amount}}">¥{{event.amount}}</text>
+          </div>
         </div>
-      </div>
-    </div>
+      </list-item>
+    </list>
   </div>
 </template>
 
@@ -42,19 +52,48 @@
 import router from '@system.router'
 import storage from '@system.storage'
 
-
 export default {
-  props: ['events'],
+  // 不再依赖 props，内部自行维护事件列表
+  props: [],
   data: {
     currentWeekStart: '',
     weekDays: [],
     weekRangeText: '',
     hours: [],
-    expandedCol: -1
+    expandedCol: -1,
+    // 内部事件数组
+    events: []
   },
   onInit() {
+    this.loadEvents()
     this.buildHours()
     this.computeCurrentWeek()
+  },
+  onShow() {
+    // 每次页面显示时重新加载数据，确保从编辑页返回后刷新
+    this.loadEvents()
+  },
+  loadEvents() {
+    storage.get({
+      key: 'events',
+      success: (value) => {
+        if (value) {
+          try {
+            this.events = JSON.parse(value) || []
+          } catch(e) {
+            this.events = []
+          }
+        } else {
+          this.events = []
+        }
+      },
+      fail: () => {
+        this.events = []
+      }
+    })
+  },
+  onReady() {
+    this.$element('timeList').scrollTo({ index: 6, animated: false })
   },
   buildHours() {
     this.hours = Array.from({length: 24}, (_, i) => ({
@@ -110,31 +149,30 @@ export default {
     this.expandedCol = this.expandedCol === index ? -1 : index
   },
   cellClick(date, hour) {
-  // 将新建日程的默认值存入临时 key
-    const defaultEvent = {
-      id: '',
-      date: date,
-      startHour: hour,
-      startMinute: 0,
-      endHour: hour + 1,
-      endMinute: 0,
-      title: '',
-      location: '',
-      amount: null,
-      category: '',
-      color: ''
-    }
-    storage.set({
-      key: 'tempEditEvent',
-      value: JSON.stringify(defaultEvent),
-      success: () => {
-        router.push({ uri: 'pages/EditEvent' })
-      },
-      fail: () => {
-        // 如果 storage 失败也尝试跳转（编辑页面会自行处理）
-        router.push({ uri: 'pages/EditEvent' })
+    const eventsAtCell = this.getEvents(date, hour)
+    if (eventsAtCell.length > 0) {
+      this.editEvent(eventsAtCell[0])
+    } else {
+      const defaultEvent = {
+        id: '',
+        date: date,
+        startHour: hour,
+        startMinute: 0,
+        endHour: hour + 1,
+        endMinute: 0,
+        title: '',
+        location: '',
+        amount: null,
+        category: '',
+        color: ''
       }
-    })
+      storage.set({
+        key: 'tempEditEvent',
+        value: JSON.stringify(defaultEvent),
+        success: () => router.push({ uri: 'pages/EditEvent' }),
+        fail: () => router.push({ uri: 'pages/EditEvent' })
+      })
+    }
   },
   getEvents(date, hour) {
     return this.events.filter(e => {
@@ -145,37 +183,142 @@ export default {
     })
   },
   editEvent(event) {
-   // 将要编辑的事件对象存入临时 key
     storage.set({
       key: 'tempEditEvent',
       value: JSON.stringify(event),
-      success: () => {
-        router.push({ uri: 'pages/EditEvent' })
-      },
-      fail: () => {
-        router.push({ uri: 'pages/EditEvent' })
-      }
+      success: () => router.push({ uri: 'pages/EditEvent' }),
+      fail: () => router.push({ uri: 'pages/EditEvent' })
     })
+  },
+  addEvent() {
+    const today = this.formatDate(new Date())
+    const defaultEvent = {
+      id: '',
+      date: today,
+      startHour: 8,
+      startMinute: 0,
+      endHour: 9,
+      endMinute: 0,
+      title: '',
+      location: '',
+      amount: null,
+      category: '',
+      color: ''
+    }
+    storage.set({
+      key: 'tempEditEvent',
+      value: JSON.stringify(defaultEvent),
+      success: () => router.push({ uri: 'pages/AddEvent' }),
+      fail: () => router.push({ uri: 'pages/AddEvent' })
+    })
+  },
+  switchToMonth() {
+    router.push({ uri: 'pages/MonthView' })
   }
 }
 </script>
 
 <style>
-.calendar { flex: 1; flex-direction: column; background-color: #fff; }
-.header { height: 80px; flex-direction: row; align-items: center; justify-content: center; border-bottom: 1px solid #ddd; }
-.arrow { padding: 20px; }
-.arrow text { font-size: 40px; color: #0f8de8; }
-.week-title { font-size: 30px; font-weight: bold; }
-.header-row { height: 80px; background-color: #fafafa; }
-.row { flex-direction: row; min-height: 60px; border-bottom: 1px solid #eee; }
-.time-label { width: 100px; align-items: center; justify-content: center; border-right: 1px solid #eee; background-color: #f9f9f9; }
+/* 样式保持不变，此处省略，请直接复制原 Calendar.ux 的 style 部分 */
+.calendar {
+  flex: 1;
+  flex-direction: column;
+  background-color: #fff;
+}
+
+.header {
+  height: 80px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #ddd;
+  padding: 0 10px;
+}
+
+.left-section, .right-section {
+  flex-direction: row;
+  align-items: center;
+}
+
+.icon-btn {
+  width: 60px;
+  height: 60px;
+  justify-content: center;
+  align-items: center;
+  margin: 0 5px;
+}
+
+.icon-btn text {
+  font-size: 32px;
+}
+
+.arrow {
+  padding: 10px;
+}
+
+.arrow text {
+  font-size: 40px;
+  color: #0f8de8;
+}
+
+.week-title {
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.header-row {
+  height: 80px;
+  background-color: #fafafa;
+}
+
+.row {
+  flex-direction: row;
+  height: 60px;
+  border-bottom: 1px solid #eee;
+}
+
+.time-label {
+  width: 100px;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #eee;
+  background-color: #f9f9f9;
+}
+
 .time-label text { font-size: 22px; color: #333; }
-.day-col { flex: 1; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #eee; padding: 2px; }
+
+.day-col {
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #eee;
+  padding: 2px;
+  height: 60px;
+}
+
 .day-col-expanded { flex: 2; }
+
 .day-name { font-size: 24px; font-weight: bold; }
 .day-date { font-size: 20px; color: #999; }
-.cell { min-height: 60px; align-items: stretch; }
-.event-item { margin: 1px 2px; padding: 4px 6px; border-radius: 4px; flex-direction: column; }
+
+.cell {
+  align-items: stretch;
+  justify-content: center;
+}
+
+.event-item {
+  margin: 1px 2px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  flex-direction: column;
+}
+
 .event-title { font-size: 22px; color: white; }
 .event-location, .event-amount { font-size: 18px; color: white; }
+
+.time-list {
+  flex: 1;
+  flex-direction: column;
+}
 </style>
