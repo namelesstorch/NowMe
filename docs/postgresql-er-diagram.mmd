@@ -1,0 +1,226 @@
+erDiagram
+    USERS ||--|| USER_PREFERENCES : has
+    USERS ||--|| USER_FINANCIAL_PROFILES : has
+    USERS ||--o{ NOTIFICATION_SETTINGS : configures
+    USERS ||--o{ FINANCIAL_GOALS : sets
+    USERS ||--o{ CATEGORIES : owns
+    USERS ||--o{ TAGS : owns
+    USERS ||--o{ EVENTS : owns
+    USERS ||--o{ TRANSACTIONS : owns
+    USERS ||--o{ BUDGETS : owns
+    USERS ||--o{ SPENDING_SUMMARIES : caches
+    USERS ||--o{ AI_INPUTS : submits
+    USERS ||--o{ AI_INSIGHTS : receives
+
+    CATEGORIES ||--o{ CATEGORIES : parent
+    CATEGORIES ||--o{ TRANSACTIONS : classifies
+    CATEGORIES ||--o{ BUDGETS : limits
+
+    EVENTS ||--o{ EVENT_REMINDERS : has
+    EVENTS ||--o{ EVENT_TAGS : tagged_by
+    EVENTS ||--o{ TRANSACTIONS : relates_to
+
+    TRANSACTIONS ||--o{ TRANSACTION_TAGS : tagged_by
+    TAGS ||--o{ EVENT_TAGS : applies_to
+    TAGS ||--o{ TRANSACTION_TAGS : applies_to
+
+    AI_INPUTS ||--o{ AI_EXTRACTIONS : produces
+    AI_INPUTS ||--o{ EVENTS : creates
+    AI_INPUTS ||--o{ TRANSACTIONS : creates
+
+    USERS {
+        uuid id PK
+        varchar username
+        varchar phone UK
+        varchar email UK
+        text avatar_url
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    USER_PREFERENCES {
+        uuid user_id PK,FK
+        varchar currency
+        varchar timezone
+        varchar default_view
+        jsonb reminder_setting
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    USER_FINANCIAL_PROFILES {
+        uuid user_id PK,FK
+        varchar currency
+        numeric initial_balance
+        numeric current_balance
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    NOTIFICATION_SETTINGS {
+        uuid id PK
+        uuid user_id FK
+        varchar channel
+        time quiet_start
+        time quiet_end
+        boolean enabled
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    FINANCIAL_GOALS {
+        uuid id PK
+        uuid user_id FK
+        varchar name
+        numeric target_amount
+        numeric current_amount
+        date start_date
+        date end_date
+        varchar status
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    CATEGORIES {
+        uuid id PK
+        uuid user_id FK
+        varchar name
+        varchar type
+        uuid parent_id FK
+        varchar icon
+        varchar color
+        timestamptz created_at
+    }
+
+    TAGS {
+        uuid id PK
+        uuid user_id FK
+        varchar name
+        varchar color
+        timestamptz created_at
+    }
+
+    EVENTS {
+        uuid id PK
+        uuid user_id FK
+        varchar title
+        text description
+        boolean all_day
+        date start_date
+        date end_date
+        timestamptz start_at
+        timestamptz end_at
+        varchar timezone
+        varchar location
+        varchar event_type
+        varchar priority
+        varchar status
+        varchar color
+        boolean is_recurring
+        jsonb recurrence_rule
+        uuid source_input_id FK
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    EVENT_REMINDERS {
+        uuid id PK
+        uuid user_id FK
+        uuid event_id FK
+        timestamptz remind_at
+        varchar method
+        boolean is_sent
+        timestamptz created_at
+    }
+
+    EVENT_TAGS {
+        uuid user_id FK
+        uuid event_id PK,FK
+        uuid tag_id PK,FK
+        timestamptz created_at
+    }
+
+    TRANSACTIONS {
+        uuid id PK
+        uuid user_id FK
+        uuid event_id FK
+        uuid category_id FK
+        varchar type
+        numeric amount
+        varchar currency
+        text description
+        timestamptz occurred_at
+        varchar payment_method
+        varchar location
+        boolean is_manual
+        uuid source_input_id FK
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    TRANSACTION_TAGS {
+        uuid user_id FK
+        uuid transaction_id PK,FK
+        uuid tag_id PK,FK
+        timestamptz created_at
+    }
+
+    BUDGETS {
+        uuid id PK
+        uuid user_id FK
+        uuid category_id FK
+        varchar period
+        date start_date
+        date end_date
+        numeric limit_amount
+        numeric alert_threshold
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    SPENDING_SUMMARIES {
+        uuid id PK
+        uuid user_id FK
+        varchar period_type
+        date period_start
+        date period_end
+        numeric total_income
+        numeric total_expense
+        numeric balance
+        jsonb category_breakdown
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    AI_INPUTS {
+        uuid id PK
+        uuid user_id FK
+        varchar input_type
+        text content
+        text raw_text
+        text image_url
+        jsonb recognized_json
+        timestamptz created_at
+    }
+
+    AI_EXTRACTIONS {
+        uuid id PK
+        uuid input_id FK
+        varchar entity_type
+        jsonb parsed_data
+        numeric confidence
+        timestamptz created_at
+    }
+
+    AI_INSIGHTS {
+        uuid id PK
+        uuid user_id FK
+        varchar insight_type
+        varchar title
+        text content
+        jsonb related_data
+        boolean is_read
+        timestamptz created_at
+    }
