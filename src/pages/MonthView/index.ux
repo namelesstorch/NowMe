@@ -1,34 +1,50 @@
 <template>
   <div class="month-view">
-    <!-- 头部月份切换 -->
+    <!-- 头部：返回按钮 + 月份切换 -->
     <div class="header">
-      <div class="arrow" @click="prevMonth"><text>‹</text></div>
-      <text class="month-title">{{year}}年{{month+1}}月</text>
-      <div class="arrow" @click="nextMonth"><text>›</text></div>
-    </div>
-
-    <!-- 星期标题 -->
-    <div class="week-header">
-      <text class="weekday" for="{{day in weekDays}}">{{day}}</text>
-    </div>
-
-    <!-- 日期网格 -->
-    <div class="days-grid">
-      <!-- 填充前面的空白 -->
-      <div class="day-cell" for="{{i in (0..firstDayOfWeek-1)}}">
-        <text class="day-num"></text>
+      <div class="left-section">
+        <div class="back-btn" @click="goBack"><text>‹</text></div>
       </div>
+      <text class="month-title">{{year}}年{{month+1}}月</text>
+      <div class="right-section">
+        <div class="arrow" @click="prevMonth"><text>‹</text></div>
+        <div class="arrow" @click="nextMonth"><text>›</text></div>
+      </div>
+    </div>
 
-      <!-- 日期单元格 -->
-      <div class="day-cell" for="{{day in daysInMonth}}">
-        <text class="day-num">{{day}}</text>
-        <div class="event-list">
-          <div for="{{event in getEventsForDay(day)}}">
-            <text class="event-dot">●</text>
-            <text class="event-title">{{event.title}}</text>
+    <!-- 日期卡片列表 -->
+    <list class="event-list" if="{{monthDays.length > 0}}">
+      <list-item for="{{day in monthDays}}" class="day-card">
+        <!-- 第一栏：日期信息 -->
+        <div class="date-row">
+          <div class="date-left">
+            <text class="date-num">{{day.day}}</text>
+            <text class="date-week">周{{day.weekName}}</text>
+          </div>
+          <div class="date-right">
+            <text class="lunar-text">{{day.lunarStr}}</text>
           </div>
         </div>
-      </div>
+
+        <!-- 事件列表 -->
+        <div class="event-row" for="{{(idx, event) in day.events}}">
+          <div class="event-left">
+            <text class="event-title">{{event.title}}</text>
+            <text class="event-location" if="{{event.location}}">📍{{event.location}}</text>
+          </div>
+          <div class="event-right">
+            <text class="event-time">{{formatTime(event)}}</text>
+          </div>
+        </div>
+
+        <div class="empty-event" if="{{!day.events.length}}">
+          <text class="empty-text">暂无日程</text>
+        </div>
+      </list-item>
+    </list>
+
+    <div class="no-data" if="{{monthDays.length === 0}}">
+      <text>加载中...</text>
     </div>
   </div>
 </template>
@@ -37,43 +53,157 @@
 import router from '@system.router'
 import storage from '@system.storage'
 
+// ========== 稳定版农历转换（1900-2100） ==========
+const lunarInfo = [
+  0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+  0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+  0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+  0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+  0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+  0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,
+  0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+  0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,
+  0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+  0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x05ac0,0x0ab60,0x096d5,0x092e0,
+  0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+  0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+  0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+  0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+  0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,
+  0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,
+  0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,
+  0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,
+  0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,
+  0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a4d0,0x0d150,0x0f252,
+  0x0d520
+]
+
+const lunarDayNames = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+                       '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+                       '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十']
+const lunarMonthNames = ['正','二','三','四','五','六','七','八','九','十','冬','腊']
+
+function getLunarYearDays(year) {
+  let sum = 348
+  for (let i = 0x8000; i > 0x8; i >>= 1) sum += (lunarInfo[year - 1900] & i) ? 1 : 0
+  return sum + getLeapDays(year)
+}
+function getLeapMonth(year) { return lunarInfo[year - 1900] & 0xf }
+function getLeapDays(year) { return getLeapMonth(year) ? ((lunarInfo[year - 1900] & 0x10000) ? 30 : 29) : 0 }
+function getLunarMonthDays(year, month) { return (lunarInfo[year - 1900] & (0x10000 >> month)) ? 30 : 29 }
+
+function solar2lunar(y, m, d) {
+  if (y < 1900 || y > 2100) {
+    return { lYear: y, lMonth: m, lDay: d, monthStr: m+'月', dayStr: d+'日' }
+  }
+  const base = new Date(1900, 0, 31) // 公认基准日期：1900-1-31 = 庚子年正月初一
+  const target = new Date(y, m-1, d)
+  let offset = Math.round((target - base) / 86400000)
+  let year, month, day, isLeap = false
+  for (year = 1900; year < 2101 && offset > 0; year++) {
+    const days = getLunarYearDays(year)
+    if (offset < days) break
+    offset -= days
+  }
+  if (year > 2100) year = 2100
+  const leap = getLeapMonth(year)
+  let leapMonth = false
+  for (month = 1; month <= 12; month++) {
+    let days = (leapMonth && month === leap + 1) ? getLeapDays(year) : getLunarMonthDays(year, month)
+    if (offset < days) {
+      break
+    }
+    offset -= days
+    if (leapMonth && month === leap + 1) leapMonth = false
+    if (!leapMonth && month === leap) {
+      // 进入闰月前先减去闰月天数
+      const leapDays = getLeapDays(year)
+      if (offset >= leapDays) {
+        offset -= leapDays
+        leapMonth = true
+      } else {
+        month = leap
+        leapMonth = true
+        break
+      }
+    }
+  }
+  if (leapMonth && month === leap + 1) isLeap = true
+  day = offset + 1
+  const monthStr = (isLeap ? '闰' : '') + (lunarMonthNames[month-1] || month+'') + '月'
+  const dayStr = lunarDayNames[day-1] || day+''
+  return { lYear: year, lMonth: month, lDay: day, monthStr, dayStr }
+}
+
 export default {
   data: {
     year: new Date().getFullYear(),
     month: new Date().getMonth(),
-    weekDays: ['一', '二', '三', '四', '五', '六', '日'],
-    daysInMonth: 0,
-    firstDayOfWeek: 0,
+    monthDays: [],
     events: []
   },
   onInit() {
     this.loadEvents()
-    this.calcDateInfo()
   },
   loadEvents() {
     storage.get({
       key: 'events',
       success: (value) => {
+        let events = []
         if (value) {
-          try {
-            this.events = JSON.parse(value) || []
-          } catch(e) {}
+          try { events = JSON.parse(value) || [] } catch(e) {}
         }
+        this.events = events
+        this.buildMonth()
       },
-      fail: () => {}
+      fail: () => {
+        this.events = []
+        this.buildMonth()
+      }
     })
   },
-  calcDateInfo() {
-    const firstDate = new Date(this.year, this.month, 1)
-    // 快应用中 getDay() 返回 0-6，0=周日，但我们的周一是第一天
-    let dayOfWeek = firstDate.getDay()
-    // 调整为周一为0，周日为6
-    this.firstDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    
-    // 当月总天数
-    const nextMonthDate = new Date(this.year, this.month + 1, 1)
-    nextMonthDate.setDate(nextMonthDate.getDate() - 1)
-    this.daysInMonth = nextMonthDate.getDate()
+  buildMonth() {
+    try {
+      const weekNames = ['一','二','三','四','五','六','日']
+      const daysInMonth = new Date(this.year, this.month + 1, 0).getDate()
+      const daysArray = []
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(this.year, this.month, d)
+        const dayOfWeek = dateObj.getDay()
+        const weekName = weekNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]
+        const dateStr = `${this.year}-${(this.month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`
+
+        // 获取农历
+        let lunarStr = ''
+        try {
+          const lunar = solar2lunar(this.year, this.month + 1, d)
+          // 初一显示月份，其他显示日
+          if (lunar.dayStr === '初一') {
+            lunarStr = lunar.monthStr || (lunar.lMonth + '月')
+          } else {
+            lunarStr = lunar.dayStr || ''
+          }
+          // 最终保护
+          if (!lunarStr) lunarStr = `${this.month+1}/${d}`
+        } catch(e) {
+          lunarStr = `${this.month+1}/${d}`
+        }
+
+        const dayEvents = this.events
+          .filter(e => e.date === dateStr)
+          .sort((a, b) => (a.startHour*60 + a.startMinute) - (b.startHour*60 + b.startMinute))
+
+        daysArray.push({
+          day: d,
+          weekName: weekName,
+          lunarStr: lunarStr,
+          events: dayEvents
+        })
+      }
+      this.monthDays = daysArray
+    } catch(e) {
+      this.monthDays = []
+    }
   },
   prevMonth() {
     if (this.month === 0) {
@@ -82,7 +212,7 @@ export default {
     } else {
       this.month -= 1
     }
-    this.calcDateInfo()
+    this.buildMonth()
   },
   nextMonth() {
     if (this.month === 11) {
@@ -91,89 +221,51 @@ export default {
     } else {
       this.month += 1
     }
-    this.calcDateInfo()
+    this.buildMonth()
   },
-  getEventsForDay(day) {
-    const dateStr = `${this.year}-${(this.month+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`
-    return this.events.filter(e => e.date === dateStr)
+  goBack() {
+    router.back()
+    setTimeout(() => {
+      router.replace({ uri: 'pages/Demo' })
+    }, 300)
+  },
+  formatTime(event) {
+    if (!event) return ''
+    if (event.startHour === 0 && event.endHour === 24) return '全天'
+    const start = `${event.startHour.toString().padStart(2,'0')}:${event.startMinute.toString().padStart(2,'0')}`
+    const end = `${event.endHour.toString().padStart(2,'0')}:${event.endMinute.toString().padStart(2,'0')}`
+    return `${start}-${end}`
   }
 }
 </script>
 
 <style>
-.month-view {
-  flex: 1;
-  flex-direction: column;
-  background-color: #fff;
-  padding: 10px;
-}
-
-.header {
-  height: 80px;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid #ddd;
-}
-
-.arrow {
-  padding: 20px;
-}
-.arrow text {
-  font-size: 40px;
-  color: #0f8de8;
-}
-.month-title {
-  font-size: 30px;
-  font-weight: bold;
-}
-
-.week-header {
-  flex-direction: row;
-  height: 60px;
-  border-bottom: 1px solid #eee;
-}
-
-.weekday {
-  flex: 1;
-  text-align: center;
-  font-size: 24px;
-  font-weight: bold;
-  color: #666;
-}
-
-.days-grid {
-  flex: 1;
-  flex-direction: row;
-  flex-wrap: wrap;
-}
-
-.day-cell {
-  width: 14.28%;
-  height: 80px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  border-bottom: 1px solid #f0f0f0;
-  border-right: 1px solid #f0f0f0;
-  padding: 2px;
-}
-
-.day-num {
-  font-size: 24px;
-  margin: 4px 0;
-  color: #333;
-}
-
-.event-dot {
-  font-size: 14px;
-  color: #0f8de8;
-  margin-right: 2px;
-}
-
-.event-title {
-  font-size: 18px;
-  color: #333;
-  max-width: 90%;
-}
+/* 样式不变 */
+.month-view { flex: 1; flex-direction: column; background-color: #f5f5f5; }
+.header { height: 80px; flex-direction: row; align-items: center; justify-content: space-between; background-color: #ffffff; border-bottom: 1px solid #e0e0e0; padding: 0 10px; }
+.left-section, .right-section { flex-direction: row; align-items: center; }
+.back-btn { width: 60px; height: 60px; justify-content: center; align-items: center; }
+.back-btn text { font-size: 40px; color: #0f8de8; }
+.arrow { padding: 10px; }
+.arrow text { font-size: 40px; color: #0f8de8; }
+.month-title { font-size: 30px; font-weight: bold; }
+.event-list { flex: 1; flex-direction: column; padding: 10px; }
+.day-card { flex-direction: column; background-color: #ffffff; border-radius: 12px; margin-bottom: 15px; padding: 15px; box-shadow: 0px 2px 6px rgba(0,0,0,0.1); }
+.date-row { flex-direction: row; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px dashed #e0e0e0; margin-bottom: 10px; }
+.date-left { flex-direction: column; }
+.date-num { font-size: 36px; font-weight: bold; color: #333; }
+.date-week { font-size: 22px; color: #999; margin-top: 2px; }
+.date-right { align-items: flex-end; }
+.lunar-text { font-size: 26px; color: #666; }
+.event-row { flex-direction: row; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.event-row:last-child { border-bottom: none; }
+.event-left { flex: 1; flex-direction: column; margin-right: 10px; }
+.event-title { font-size: 28px; color: #333; font-weight: bold; }
+.event-location { font-size: 22px; color: #888; margin-top: 4px; }
+.event-right { align-items: flex-end; }
+.event-time { font-size: 24px; color: #0f8de8; font-weight: bold; }
+.empty-event { padding: 10px 0; align-items: center; }
+.empty-text { font-size: 24px; color: #ccc; }
+.no-data { flex: 1; justify-content: center; align-items: center; }
+.no-data text { font-size: 30px; color: #999; }
 </style>
