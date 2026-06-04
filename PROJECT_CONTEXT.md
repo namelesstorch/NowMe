@@ -55,7 +55,11 @@ npm run prettier
 ├── package-lock.json
 ├── docs/
 │   ├── quickapp-knowledge-base.md
-│   └── blueheart-jiuwen-knowledge-base.md
+│   ├── blueheart-jiuwen-knowledge-base.md
+│   ├── ai-model-calling-strategy.md
+│   ├── postgresql-database-architecture.md
+│   ├── postgresql-er-diagram.mmd
+│   └── postgresql-er-diagram.svg
 ├── scripts/
 │   ├── selfCloseInputTag.js
 │   └── gen/
@@ -338,12 +342,13 @@ tempEditEvent
 
 ## 10. 文档资料
 
-已有两份项目内知识库：
+已有项目内知识库和设计资料：
 
 - `docs/quickapp-knowledge-base.md`：快应用开发速查资料，包含 manifest、路由、生命周期、组件、样式、存储、媒体、打包发布等内容。
 - `docs/blueheart-jiuwen-knowledge-base.md`：蓝心九问平台资料，包含 Bot、工具库、知识库、API 发布、鉴权、限制、错误码等信息。
+- `docs/ai-model-calling-strategy.md`：端侧蓝心 3B、蓝心九问云端 Agent、第三方云能力和本地规则的调用分工与路由策略。
 
-后续如果要把 AI 助手从本地 mock 改成真实智能体，优先阅读蓝心九问知识库。
+后续如果要把 AI 助手从本地 mock 改成真实智能体，优先阅读蓝心九问知识库和端云模型调用策略文档。
 
 ## 11. 当前已知问题与后续优先级
 
@@ -369,5 +374,5 @@ tempEditEvent
 如果要接入真实 AI 能力，可以补充：
 
 ```text
-请同时阅读 docs/blueheart-jiuwen-knowledge-base.md，评估如何把 AIAssistant.ux 从本地 mock 改为调用蓝心九问 Bot/API，并注意快应用端鉴权、网络请求、隐私和错误兜底。
+请同时阅读 docs/blueheart-jiuwen-knowledge-base.md 和 docs/ai-model-calling-strategy.md，评估如何把 AIAssistant.ux 从本地 mock 改为端侧蓝心 3B、本地规则与蓝心九问 Agent 协同调用，并注意快应用端鉴权、网络请求、隐私和错误兜底。
 ```

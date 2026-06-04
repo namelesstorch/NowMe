@@ -11,6 +11,8 @@
 - 用户总金额由 `user_financial_profiles` 保存，不再建立 `accounts` 表。
 - 保留 AI 输入、AI 解析、AI 洞察相关表，为即将接入的 AI 能力预留。
 - 保留 `spending_summaries`，但它是统计缓存，不是原始账目来源。
+- 为个性化建议新增“情境特征”与“习惯证据”结构。AI 不应只按用户历史原文检索，还应能按天气、时间段、工作日/周末、地点场景、消费/日程场景等条件检索用户习惯。
+- 云端 Agent 不直接访问数据库。后端或端侧先检索并打包相关上下文，再把最小必要信息发给云端。
 
 ## 相比原始结构图的调整
 
@@ -59,6 +61,10 @@
 - `ai_inputs`：用户原始输入，文本、语音、图片均可。
 - `ai_extractions`：AI 结构化解析结果。
 - `ai_insights`：AI 生成的建议、提醒、预算分析等。
+- `context_snapshots`：日程、账目和 AI 输入对应的情境快照，例如天气、时间段、地点场景、活动场景。
+- `user_habit_signals`：从历史记录中沉淀出的用户习惯证据，用于个性化建议检索。
+- `ai_context_packages`：记录每次发往云端 Agent 的上下文包摘要，便于审计和调试。
+- `ai_recommendation_feedback`：记录用户对 AI 建议的接受、忽略或修改反馈。
 
 ## ER 图
 
@@ -96,6 +102,13 @@ erDiagram
     AI_INPUTS ||--o{ AI_EXTRACTIONS : produces
     AI_INPUTS ||--o{ EVENTS : creates
     AI_INPUTS ||--o{ TRANSACTIONS : creates
+    AI_INPUTS ||--o{ AI_CONTEXT_PACKAGES : packaged_for
+    AI_INSIGHTS ||--o{ AI_RECOMMENDATION_FEEDBACK : receives
+    EVENTS ||--o{ CONTEXT_SNAPSHOTS : described_by
+    TRANSACTIONS ||--o{ CONTEXT_SNAPSHOTS : described_by
+    USERS ||--o{ CONTEXT_SNAPSHOTS : owns
+    USERS ||--o{ USER_HABIT_SIGNALS : learns
+    USERS ||--o{ AI_CONTEXT_PACKAGES : sends
 ```
 
 ## 字段设计
@@ -205,6 +218,111 @@ erDiagram
 | `updated_at` | `TIMESTAMPTZ` | 更新时间 |
 
 `spending_summaries` 只作为统计缓存或报表加速表。真实账目永远以 `transactions` 为准。
+
+### context_snapshots
+
+`context_snapshots` 用于保存一条日程、账目或 AI 输入发生时的情境特征。它不是原始日程或账目的替代品，而是为了后续检索“用户在什么情境下通常做什么”。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `UUID` | 主键 |
+| `user_id` | `UUID` | 所属用户 |
+| `source_type` | `VARCHAR(20)` | `event/transaction/ai_input/manual` |
+| `event_id` | `UUID` | 关联日程，可空 |
+| `transaction_id` | `UUID` | 关联交易，可空 |
+| `input_id` | `UUID` | 关联 AI 输入，可空 |
+| `occurred_at` | `TIMESTAMPTZ` | 情境发生时间 |
+| `date_local` | `DATE` | 用户本地日期，便于本地日历检索 |
+| `timezone` | `VARCHAR(50)` | 用户时区 |
+| `day_of_week` | `SMALLINT` | 1-7，建议 1 表示周一 |
+| `is_weekend` | `BOOLEAN` | 是否周末 |
+| `time_bucket` | `VARCHAR(20)` | `early_morning/morning/noon/afternoon/evening/night` |
+| `weather_condition` | `VARCHAR(30)` | `sunny/cloudy/rainy/snowy/foggy/windy/unknown` |
+| `temperature_bucket` | `VARCHAR(20)` | `cold/cool/mild/warm/hot/unknown` |
+| `location_text` | `VARCHAR(255)` | 原始地点文本，可空 |
+| `location_scene` | `VARCHAR(50)` | 地点场景，如 `home/work/school/supermarket/restaurant/outdoor/unknown` |
+| `activity_scene` | `VARCHAR(50)` | 活动场景，如 `meal/shopping/study/work/commute/social/fitness/errand` |
+| `mood` | `VARCHAR(30)` | 情绪或状态，可空 |
+| `features` | `JSONB` | 其他情境特征，例如节假日、考试周、是否发薪日 |
+| `created_at` | `TIMESTAMPTZ` | 创建时间 |
+
+建议：
+
+- 创建日程和交易时同步生成或更新 `context_snapshots`。
+- 天气可以由后端根据时间与城市调用天气服务后写入；缺失时写 `unknown`，不要让模型编造。
+- 同一条记录可以先写基础情境，后续异步补充天气、节假日等特征。
+
+### user_habit_signals
+
+`user_habit_signals` 用于沉淀个性化建议的可检索证据。例如“用户在工作日、阴雨天、下午，常选择某类餐饮或某个地点”。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `UUID` | 主键 |
+| `user_id` | `UUID` | 所属用户 |
+| `signal_type` | `VARCHAR(30)` | `food_preference/spending_pattern/schedule_pattern/location_pattern/time_pattern` |
+| `subject_type` | `VARCHAR(30)` | `category/tag/item/location_scene/activity_scene/text_label` |
+| `subject_value` | `VARCHAR(100)` | 偏好对象，如 `火锅`、`餐饮`、`supermarket` |
+| `context_filter` | `JSONB` | 触发情境，例如 `{"weather_condition":"rainy","time_bucket":"afternoon","is_weekend":false}` |
+| `evidence_count` | `INTEGER` | 支持该信号的历史记录数 |
+| `confidence` | `NUMERIC(5,4)` | 0-1 置信度 |
+| `first_observed_at` | `TIMESTAMPTZ` | 首次观察时间 |
+| `last_observed_at` | `TIMESTAMPTZ` | 最近观察时间 |
+| `example_refs` | `JSONB` | 少量证据引用，如 event/transaction id 列表，不放原始敏感文本 |
+| `status` | `VARCHAR(20)` | `active/stale/rejected` |
+| `created_at` | `TIMESTAMPTZ` | 创建时间 |
+| `updated_at` | `TIMESTAMPTZ` | 更新时间 |
+
+维护建议：
+
+- 第一阶段可由后端定时从 `events`、`transactions`、`context_snapshots` 聚合生成。
+- 不建议每次建议都扫描全量原始记录；先查 `user_habit_signals`，需要解释时再取少量原始记录摘要。
+- 用户明确否定某类建议时，将对应信号标记为 `rejected` 或降低 `confidence`。
+
+### ai_context_packages
+
+`ai_context_packages` 记录发往云端 Agent 的上下文包摘要，便于追踪“模型为什么这么建议”。不建议保存完整隐私原文。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `UUID` | 主键 |
+| `user_id` | `UUID` | 所属用户 |
+| `input_id` | `UUID` | 对应 `ai_inputs.id`，可空 |
+| `package_type` | `VARCHAR(30)` | `parse/recommendation/budget/schedule_summary/monthly_summary` |
+| `context_keys` | `JSONB` | 包含的上下文类型，如 `schedule_snapshot/budget_snapshot/habit_evidence` |
+| `payload_summary` | `JSONB` | 脱敏后的摘要和计数，不保存完整敏感明细 |
+| `token_estimate` | `INTEGER` | 估算 token 或字符量 |
+| `privacy_level` | `VARCHAR(20)` | `minimal/standard/sensitive` |
+| `created_at` | `TIMESTAMPTZ` | 创建时间 |
+
+### ai_recommendation_feedback
+
+`ai_recommendation_feedback` 用于记录用户对 AI 建议的反馈，反向修正习惯信号。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `UUID` | 主键 |
+| `user_id` | `UUID` | 所属用户 |
+| `insight_id` | `UUID` | 对应 `ai_insights.id` |
+| `feedback_type` | `VARCHAR(20)` | `accepted/dismissed/modified/negative` |
+| `feedback_text` | `TEXT` | 用户补充说明，可空 |
+| `created_at` | `TIMESTAMPTZ` | 创建时间 |
+
+## 情境化建议检索示例
+
+用户问：
+
+```text
+今天下午下雨，吃点什么好？
+```
+
+推荐后端检索顺序：
+
+1. 标准化当前情境：`weather_condition=rainy`、`time_bucket=afternoon`、`is_weekend=false`。
+2. 查询 `user_habit_signals` 中匹配这些情境的 `food_preference` 和 `spending_pattern`。
+3. 如果信号不足，再从最近 30-90 天的 `context_snapshots` 关联 `transactions` 取少量候选。
+4. 聚合成 `habit_evidence`，脱敏后放入云端 Agent 上下文包。
+5. 云端 Agent 只负责表达、权衡和建议；最终推荐展示由后端校验风险和预算。
 
 ## 建表 SQL 草案
 
@@ -520,6 +638,108 @@ CREATE TABLE ai_insights (
   CONSTRAINT ai_insights_type_check
     CHECK (insight_type IN ('analysis', 'budget', 'advice', 'reminder'))
 );
+
+CREATE TABLE context_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  source_type VARCHAR(20) NOT NULL,
+  event_id UUID,
+  transaction_id UUID,
+  input_id UUID,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  date_local DATE NOT NULL,
+  timezone VARCHAR(50) NOT NULL,
+  day_of_week SMALLINT NOT NULL,
+  is_weekend BOOLEAN NOT NULL,
+  time_bucket VARCHAR(20) NOT NULL,
+  weather_condition VARCHAR(30) NOT NULL DEFAULT 'unknown',
+  temperature_bucket VARCHAR(20) NOT NULL DEFAULT 'unknown',
+  location_text VARCHAR(255),
+  location_scene VARCHAR(50),
+  activity_scene VARCHAR(50),
+  mood VARCHAR(30),
+  features JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT context_snapshots_event_fk
+    FOREIGN KEY (event_id)
+    REFERENCES events(id)
+    ON DELETE CASCADE,
+  CONSTRAINT context_snapshots_transaction_fk
+    FOREIGN KEY (transaction_id)
+    REFERENCES transactions(id)
+    ON DELETE CASCADE,
+  CONSTRAINT context_snapshots_input_fk
+    FOREIGN KEY (input_id)
+    REFERENCES ai_inputs(id)
+    ON DELETE SET NULL,
+  CONSTRAINT context_snapshots_source_type_check
+    CHECK (source_type IN ('event', 'transaction', 'ai_input', 'manual')),
+  CONSTRAINT context_snapshots_day_of_week_check
+    CHECK (day_of_week BETWEEN 1 AND 7),
+  CONSTRAINT context_snapshots_time_bucket_check
+    CHECK (time_bucket IN ('early_morning', 'morning', 'noon', 'afternoon', 'evening', 'night')),
+  CONSTRAINT context_snapshots_weather_check
+    CHECK (weather_condition IN ('sunny', 'cloudy', 'rainy', 'snowy', 'foggy', 'windy', 'unknown')),
+  CONSTRAINT context_snapshots_temperature_check
+    CHECK (temperature_bucket IN ('cold', 'cool', 'mild', 'warm', 'hot', 'unknown'))
+);
+
+CREATE TABLE user_habit_signals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  signal_type VARCHAR(30) NOT NULL,
+  subject_type VARCHAR(30) NOT NULL,
+  subject_value VARCHAR(100) NOT NULL,
+  context_filter JSONB NOT NULL DEFAULT '{}'::jsonb,
+  evidence_count INTEGER NOT NULL DEFAULT 0,
+  confidence NUMERIC(5,4) NOT NULL DEFAULT 0,
+  first_observed_at TIMESTAMPTZ,
+  last_observed_at TIMESTAMPTZ,
+  example_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT user_habit_signals_signal_type_check
+    CHECK (signal_type IN ('food_preference', 'spending_pattern', 'schedule_pattern', 'location_pattern', 'time_pattern')),
+  CONSTRAINT user_habit_signals_subject_type_check
+    CHECK (subject_type IN ('category', 'tag', 'item', 'location_scene', 'activity_scene', 'text_label')),
+  CONSTRAINT user_habit_signals_confidence_check
+    CHECK (confidence >= 0 AND confidence <= 1),
+  CONSTRAINT user_habit_signals_evidence_count_check
+    CHECK (evidence_count >= 0),
+  CONSTRAINT user_habit_signals_status_check
+    CHECK (status IN ('active', 'stale', 'rejected')),
+  UNIQUE (user_id, signal_type, subject_type, subject_value, context_filter)
+);
+
+CREATE TABLE ai_context_packages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  input_id UUID REFERENCES ai_inputs(id) ON DELETE SET NULL,
+  package_type VARCHAR(30) NOT NULL,
+  context_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
+  payload_summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+  token_estimate INTEGER,
+  privacy_level VARCHAR(20) NOT NULL DEFAULT 'minimal',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT ai_context_packages_type_check
+    CHECK (package_type IN ('parse', 'recommendation', 'budget', 'schedule_summary', 'monthly_summary')),
+  CONSTRAINT ai_context_packages_privacy_level_check
+    CHECK (privacy_level IN ('minimal', 'standard', 'sensitive')),
+  CONSTRAINT ai_context_packages_token_estimate_check
+    CHECK (token_estimate IS NULL OR token_estimate >= 0)
+);
+
+CREATE TABLE ai_recommendation_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  insight_id UUID NOT NULL REFERENCES ai_insights(id) ON DELETE CASCADE,
+  feedback_type VARCHAR(20) NOT NULL,
+  feedback_text TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT ai_recommendation_feedback_type_check
+    CHECK (feedback_type IN ('accepted', 'dismissed', 'modified', 'negative'))
+);
 ```
 
 说明：`transactions.event_id`、`transactions.category_id`、`events.source_input_id`、`budgets.category_id` 这类可空引用使用单列外键，便于 `ON DELETE SET NULL` 正常工作。同用户一致性需要由后端服务在写入时校验；`event_tags`、`transaction_tags`、`event_reminders` 这类不可空关系仍使用复合外键防止跨用户误关联。
@@ -560,6 +780,25 @@ CREATE INDEX idx_spending_summaries_user_period
 
 CREATE INDEX idx_ai_inputs_user_created_at
   ON ai_inputs(user_id, created_at);
+
+CREATE INDEX idx_context_snapshots_user_context
+  ON context_snapshots(user_id, weather_condition, time_bucket, is_weekend, date_local);
+
+CREATE INDEX idx_context_snapshots_user_scene
+  ON context_snapshots(user_id, location_scene, activity_scene, occurred_at);
+
+CREATE INDEX idx_context_snapshots_features_gin
+  ON context_snapshots USING GIN (features);
+
+CREATE INDEX idx_user_habit_signals_lookup
+  ON user_habit_signals(user_id, signal_type, subject_type, subject_value)
+  WHERE status = 'active';
+
+CREATE INDEX idx_user_habit_signals_context_gin
+  ON user_habit_signals USING GIN (context_filter);
+
+CREATE INDEX idx_ai_context_packages_user_created_at
+  ON ai_context_packages(user_id, created_at);
 ```
 
 ## 后端维护规则
@@ -602,6 +841,25 @@ AI 功能建议采用以下流程：
 4. 如果用户确认生成账目，写入 `transactions.source_input_id`。
 5. 如果 AI 生成分析或建议，写入 `ai_insights`。
 
+### 情境快照与习惯信号
+
+建议后端按以下规则维护：
+
+1. 日程或交易确认写入后，同步创建 `context_snapshots` 基础记录。
+2. 天气、节假日、城市等可能异步获取的特征，可以后补到 `features` 或相关字段。
+3. 每日或每周从 `context_snapshots`、`events`、`transactions` 聚合更新 `user_habit_signals`。
+4. 聚合时至少考虑 `weather_condition`、`time_bucket`、`is_weekend`、`location_scene`、`activity_scene`、`category_id`。
+5. `user_habit_signals.confidence` 应随证据数量、最近活跃度和用户反馈调整。
+6. 用户拒绝某类建议时，写入 `ai_recommendation_feedback`，并降低或停用对应习惯信号。
+
+### 云端上下文包审计
+
+调用蓝心九问 Agent 前，后端应写入 `ai_context_packages`：
+
+- `context_keys` 记录实际包含了哪些上下文，例如 `["budget_snapshot", "habit_evidence"]`。
+- `payload_summary` 只保存脱敏摘要、数量和关键统计，不保存完整原始输入、完整地点、完整交易流水。
+- `privacy_level` 如果为 `sensitive`，日志和排查页面应默认隐藏详情。
+
 ## 当前本地数据迁移规则
 
 当前快应用本地 `events` 数据大致包含：
@@ -641,8 +899,9 @@ AI 功能建议采用以下流程：
 4. 创建 `transactions`、`transaction_tags`。
 5. 创建 `budgets`、`financial_goals`、`spending_summaries`。
 6. 创建 `ai_extractions`、`ai_insights`。
-7. 实现后端 API。
-8. 编写本地 `events` 到 PostgreSQL 的迁移脚本。
+7. 创建 `context_snapshots`、`user_habit_signals`、`ai_context_packages`、`ai_recommendation_feedback`。
+8. 实现后端 API。
+9. 编写本地 `events` 到 PostgreSQL 的迁移脚本。
 
 ## 后端 API 建议
 
@@ -666,6 +925,9 @@ PUT    /api/user/financial-profile
 GET    /api/spending-summaries
 POST   /api/ai/inputs
 GET    /api/ai/insights
+POST   /api/ai/context-packages
+GET    /api/ai/habit-signals
+POST   /api/ai/recommendation-feedback
 ```
 
 ## 不做的能力
