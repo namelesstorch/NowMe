@@ -1,45 +1,143 @@
 <template>
   <div class="accounting">
-    <text class="title">记账本</text>
-    <div class="summary">
-      <text class="total-label">本月支出</text>
-      <text class="total-amount">¥{{monthlyTotal}}</text>
+    <!-- 明细视图 -->
+    <div class="detail-view" if="{{currentTab === 'detail'}}">
+      <div class="header">
+        <div class="arrow" @click="prevMonth"><text>‹</text></div>
+        <text class="month-title">{{currentYear}}年{{currentMonth}}月</text>
+        <div class="arrow" @click="nextMonth"><text>›</text></div>
+      </div>
+
+      <div class="week-header">
+        <text class="weekday" for="{{day in weekDays}}">{{day}}</text>
+      </div>
+
+      <div class="calendar-grid">
+        <div class="calendar-cell {{cell.cellClass}}" for="{{cell in calendarCells}}">
+          <text class="cell-date">{{cell.day}}</text>
+          <div class="cell-amounts" if="{{cell.isCurrentMonth && (cell.income > 0 || cell.expense > 0)}}">
+            <text class="income-text" if="{{cell.income > 0}}">收: ¥{{cell.incomeStr}}</text>
+            <text class="expense-text" if="{{cell.expense > 0}}">支: ¥{{cell.expenseStr}}</text>
+          </div>
+        </div>
+      </div>
+
+      <div class="month-summary">
+        <text class="summary-label">本月收入：¥{{monthIncome}}</text>
+        <text class="summary-label">本月支出：¥{{monthExpense}}</text>
+      </div>
     </div>
-    <div class="list">
-      <div for="{{item in filteredEvents}}" class="list-item">
-        <div class="item-row">
-          <text class="item-date">{{item.date}}</text>
-          <text class="item-title">{{item.title}}</text>
-          <text class="item-amount">-¥{{item.amount}}</text>
-          <text class="item-category">{{item.category || '其他'}}</text>
+
+    <!-- 统计视图 -->
+    <div class="stat-view" if="{{currentTab === 'stat'}}">
+      <div class="stat-header">
+        <div class="icon-btn" @click="prevStatMonth"><text>‹</text></div>
+        <text class="stat-month-title">{{statYear}}年{{statMonth}}月账目统计</text>
+        <div class="icon-btn" @click="nextStatMonth"><text>›</text></div>
+      </div>
+
+      <div class="stat-card">
+        <div class="card-top-row">
+          <div class="balance-block">
+            <text class="balance-label">本月结余</text>
+            <text class="balance-amount">{{statSummary.balanceStr}}</text>
+          </div>
+          <div class="prev-balance-block">
+            <text class="prev-label">上月结余：</text>
+            <text class="prev-amount">{{statSummary.prevBalanceStr}}</text>
+          </div>
+        </div>
+        <div class="progress-bars">
+          <div class="progress-row">
+            <text class="progress-label">支出</text>
+            <div class="progress-bar expense-bar" style="width: {{statSummary.expensePercent}}%; background-color: #FFC107;"></div>
+            <text class="progress-value">¥{{statSummary.monthExpenseStr}}</text>
+          </div>
+          <div class="progress-row">
+            <text class="progress-label">收入</text>
+            <div class="progress-bar income-bar" style="width: {{statSummary.incomePercent}}%; background-color: #EF5350;"></div>
+            <text class="progress-value">¥{{statSummary.monthIncomeStr}}</text>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <text class="card-title">支出趋势概况</text>
+        <div class="trend-block">
+          <text class="trend-label">本月单日最高支出</text>
+          <text class="trend-highlight">{{statSummary.maxExpenseDate}} 支出 ¥{{statSummary.maxExpenseStr}}</text>
+        </div>
+        <div class="trend-stats">
+          <div class="trend-stat-item">
+            <text class="stat-label">本月每日平均支出</text>
+            <text class="stat-value">{{statSummary.avgExpenseStr}}</text>
+          </div>
+          <div class="trend-stat-item">
+            <text class="stat-label">本月支出总笔数</text>
+            <text class="stat-value">{{statSummary.expenseCount}}</text>
+          </div>
+        </div>
+        <div class="chart-container">
+          <div class="chart-bar" for="{{item in statSummary.dailyBars}}" style="height: {{item.height}}px;">
+            <text class="bar-amount" if="{{item.amount > 0}}">{{item.amountStr}}</text>
+            <text class="bar-date">{{item.day}}</text>
+          </div>
         </div>
       </div>
     </div>
-    <div class="empty" if="{{filteredEvents.length === 0}}">
-      <text>暂无消费记录</text>
-      <text class="sub">在日程中添加金额即可自动记账</text>
+
+    <!-- 底部导航栏 -->
+    <div class="bottom-bar">
+      <div class="tab-item {{currentTab === 'detail' ? 'active' : ''}}" @click="switchTab('detail')">
+        <text class="tab-text">明细</text>
+      </div>
+      <div class="add-btn" @click="addRecord">
+        <text class="add-icon">+</text>
+      </div>
+      <div class="tab-item {{currentTab === 'stat' ? 'active' : ''}}" @click="switchTab('stat')">
+        <text class="tab-text">统计</text>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import storage from '@system.storage'
+import prompt from '@system.prompt'
 
 export default {
-  // 不再依赖 props，改为自己读取
-  props: [],
   data: {
-    monthlyTotal: 0,
-    filteredEvents: []
+    currentYear: new Date().getFullYear(),
+    currentMonth: new Date().getMonth() + 1,
+    weekDays: ['日', '一', '二', '三', '四', '五', '六'],
+    calendarCells: [],
+    monthIncome: 0,
+    monthExpense: 0,
+    events: [],
+    statYear: new Date().getFullYear(),
+    statMonth: new Date().getMonth() + 1,
+    statSummary: {
+      balanceStr: '0.00',
+      prevBalanceStr: '0.00',
+      monthExpenseStr: '0.00',
+      monthIncomeStr: '0.00',
+      expensePercent: 0,
+      incomePercent: 0,
+      maxExpenseDate: '--',
+      maxExpenseStr: '0.00',
+      avgExpenseStr: '0.00',
+      expenseCount: 0,
+      dailyBars: []
+    },
+    currentTab: 'detail'
   },
   onInit() {
-    this.loadData()
+    this.loadEvents()
   },
   onShow() {
-    // 每次 attached 时重新加载（快应用中 tab 切换时会触发 onShow）
-    this.loadData()
+    this.loadEvents()
   },
-  loadData() {
+  loadEvents() {
     storage.get({
       key: 'events',
       success: (value) => {
@@ -49,50 +147,299 @@ export default {
             events = JSON.parse(value) || []
           } catch(e) {}
         }
-        this.processEvents(events)
+        this.events = events
+        this.buildCalendar()
+        if (this.currentTab === 'stat') {
+          this.buildStat()
+        }
       },
       fail: () => {
-        this.filteredEvents = []
-        this.monthlyTotal = 0
+        this.events = []
+        this.buildCalendar()
+        if (this.currentTab === 'stat') {
+          this.buildStat()
+        }
       }
     })
   },
-  processEvents(events) {
-    const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
-    
-    this.filteredEvents = events
-      .filter(e => e.amount && e.amount > 0)
-      .sort((a, b) => (a.date < b.date ? 1 : -1))
-      
-    this.monthlyTotal = events
-      .filter(e => {
-        if (!e.amount) return false
-        const d = new Date(e.date)
-        return d.getFullYear() === currentYear && d.getMonth() === currentMonth
+
+  // ================= 明细日历逻辑 =================
+  buildCalendar() {
+    try {
+      const year = this.currentYear
+      const month = this.currentMonth
+      const daysInMonth = new Date(year, month, 0).getDate()
+      const firstDayOfWeek = new Date(year, month - 1, 1).getDay()
+
+      const prevMonthDays = firstDayOfWeek
+      const prevMonthYear = month === 1 ? year - 1 : year
+      const prevMonth = month === 1 ? 12 : month - 1
+      const prevMonthTotalDays = new Date(prevMonthYear, prevMonth, 0).getDate()
+
+      const totalCells = 42
+      const nextDays = totalCells - prevMonthDays - daysInMonth
+
+      const cells = []
+      // 前补上月日期
+      for (let i = 0; i < prevMonthDays; i++) {
+        cells.push({
+          day: prevMonthTotalDays - prevMonthDays + i + 1,
+          isCurrentMonth: false,
+          income: 0,
+          expense: 0
+        })
+      }
+
+      const monthPrefix = `${year}-${month.toString().padStart(2, '0')}`
+      let totalIncome = 0
+      let totalExpense = 0
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${monthPrefix}-${d.toString().padStart(2, '0')}`
+        const dayIncome = this.events
+          .filter(e => e.date === dateStr && e.type === 'income')
+          .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+        const dayExpense = this.events
+          .filter(e => e.date === dateStr && e.type !== 'income')
+          .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+        totalIncome += dayIncome
+        totalExpense += dayExpense
+
+        cells.push({
+          day: d,
+          isCurrentMonth: true,
+          income: dayIncome,
+          expense: dayExpense,
+          incomeStr: dayIncome.toFixed(2),
+          expenseStr: dayExpense.toFixed(2),
+          cellClass: (dayIncome > 0 || dayExpense > 0) ? 'active-cell' : 'inactive-cell'
+        })
+      }
+
+      // 后补下月日期
+      for (let d = 1; d <= nextDays; d++) {
+        cells.push({
+          day: d,
+          isCurrentMonth: false,
+          income: 0,
+          expense: 0
+        })
+      }
+
+      this.calendarCells = cells
+      this.monthIncome = totalIncome.toFixed(2)
+      this.monthExpense = totalExpense.toFixed(2)
+    } catch(e) {
+      console.error('buildCalendar error:', e)
+    }
+  },
+  prevMonth() {
+    if (this.currentMonth === 1) {
+      this.currentYear -= 1
+      this.currentMonth = 12
+    } else {
+      this.currentMonth -= 1
+    }
+    this.buildCalendar()
+  },
+  nextMonth() {
+    if (this.currentMonth === 12) {
+      this.currentYear += 1
+      this.currentMonth = 1
+    } else {
+      this.currentMonth += 1
+    }
+    this.buildCalendar()
+  },
+
+  // ================= 统计逻辑 =================
+  prevStatMonth() {
+    if (this.statMonth === 1) {
+      this.statYear -= 1
+      this.statMonth = 12
+    } else {
+      this.statMonth -= 1
+    }
+    this.buildStat()
+  },
+  nextStatMonth() {
+    if (this.statMonth === 12) {
+      this.statYear += 1
+      this.statMonth = 1
+    } else {
+      this.statMonth += 1
+    }
+    this.buildStat()
+  },
+  buildStat() {
+    try {
+      const year = this.statYear
+      const month = this.statMonth
+      const monthPrefix = `${year}-${month.toString().padStart(2, '0')}`
+
+      let monthIncome = 0
+      let monthExpense = 0
+      let expenseCount = 0
+      const dailyExpense = {}
+
+      this.events.forEach(e => {
+        if (!e.date || !e.amount) return
+        const amount = parseFloat(e.amount) || 0
+        if (e.date.startsWith(monthPrefix)) {
+          if (e.type === 'income') {
+            monthIncome += amount
+          } else {
+            monthExpense += amount
+            expenseCount++
+            const day = parseInt(e.date.split('-')[2])
+            dailyExpense[day] = (dailyExpense[day] || 0) + amount
+          }
+        }
       })
-      .reduce((sum, e) => sum + (e.amount || 0), 0)
-      .toFixed(2)
+
+      // 上月结余
+      const firstDayOfMonth = `${monthPrefix}-01`
+      let prevBalance = 0
+      this.events.forEach(e => {
+        if (e.date && e.date < firstDayOfMonth) {
+          const amount = parseFloat(e.amount) || 0
+          prevBalance += (e.type === 'income' ? amount : -amount)
+        }
+      })
+
+      const balance = prevBalance + monthIncome - monthExpense
+
+      // 柱状图数据
+      const daysInMonth = new Date(year, month, 0).getDate()
+      const dailyBars = []
+      let maxExpense = 0
+      let maxExpenseDate = ''
+      let totalExpenseForAvg = 0
+      for (let d = 1; d <= daysInMonth; d++) {
+        const expense = dailyExpense[d] || 0
+        totalExpenseForAvg += expense
+        dailyBars.push({
+          day: d,
+          amount: expense,
+          amountStr: expense > 0 ? expense.toFixed(2) : ''
+        })
+        if (expense > maxExpense) {
+          maxExpense = expense
+          maxExpenseDate = `${month}月${d}日`
+        }
+      }
+
+      const maxBarHeight = 100
+      const maxAmount = maxExpense || 1
+      dailyBars.forEach(bar => {
+        bar.height = Math.round((bar.amount / maxAmount) * maxBarHeight)
+      })
+
+      const avgExpense = daysInMonth > 0 ? totalExpenseForAvg / daysInMonth : 0
+
+      const maxForProgress = Math.max(monthExpense, monthIncome, 1)
+      const expensePercent = Math.round((monthExpense / maxForProgress) * 100)
+      const incomePercent = Math.round((monthIncome / maxForProgress) * 100)
+
+      this.statSummary = {
+        balanceStr: balance.toFixed(2),
+        prevBalanceStr: prevBalance.toFixed(2),
+        monthExpenseStr: monthExpense.toFixed(2),
+        monthIncomeStr: monthIncome.toFixed(2),
+        expensePercent: expensePercent,
+        incomePercent: incomePercent,
+        maxExpenseDate: maxExpenseDate,
+        maxExpenseStr: maxExpense.toFixed(2),
+        avgExpenseStr: avgExpense.toFixed(2),
+        expenseCount: expenseCount,
+        dailyBars: dailyBars
+      }
+    } catch(e) {
+      console.error('buildStat error:', e)
+    }
+  },
+
+  switchTab(tab) {
+    this.currentTab = tab
+    if (tab === 'stat') {
+      this.buildStat()
+    }
+  },
+
+  addRecord() {
+    prompt.showToast({ message: '添加记账功能开发中' })
   }
 }
 </script>
 
 <style>
-/* 样式保持不变，此处省略 */
-.accounting { flex: 1; flex-direction: column; padding: 20px; background-color: #fff; }
-.title { font-size: 36px; font-weight: bold; margin-bottom: 15px; }
-.summary { flex-direction: row; justify-content: space-between; align-items: center; padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 12px; margin-bottom: 20px; }
-.total-label { font-size: 28px; color: rgba(255,255,255,0.9); }
-.total-amount { font-size: 40px; color: #fff; font-weight: bold; }
-.list { flex: 1; }
-.list-item { padding: 15px; border-bottom: 1px solid #f0f0f0; }
-.item-row { flex-direction: row; align-items: center; justify-content: space-between; }
-.item-date { font-size: 22px; color: #888; width: 130px; }
-.item-title { font-size: 26px; flex: 1; color: #333; }
-.item-amount { font-size: 26px; color: #e53935; width: 120px; text-align: right; font-weight: bold; }
-.item-category { font-size: 22px; color: #999; width: 100px; text-align: center; background-color: #f0f0f0; border-radius: 10px; padding: 4px 0; }
-.empty { flex: 1; justify-content: center; align-items: center; }
-.empty text { font-size: 28px; color: #999; }
-.sub { font-size: 24px; color: #bbb; margin-top: 10px; }
+.accounting { flex: 1; flex-direction: column; background-color: #fff; }
+
+/* 明细视图 */
+.detail-view { flex: 1; flex-direction: column; }
+.header { height: 80px; flex-direction: row; align-items: center; justify-content: center; border-bottom: 1px solid #eee; }
+.arrow { padding: 20px; }
+.arrow text { font-size: 40px; color: #0f8de8; }
+.month-title { font-size: 30px; font-weight: bold; }
+
+.week-header { flex-direction: row; height: 60px; border-bottom: 1px solid #eee; }
+.weekday { flex: 1; text-align: center; font-size: 24px; color: #666; font-weight: bold; }
+
+.calendar-grid { flex: 1; flex-direction: row; flex-wrap: wrap; }
+.calendar-cell { width: 14.2857%; height: 100px; flex-direction: column; border: 1px solid #e0e0e0; padding: 4px; box-sizing: border-box; }
+.cell-date { font-size: 22px; font-weight: bold; color: #333; margin-bottom: 2px; }
+.inactive-cell { background-color: #f0f0f0; }
+.active-cell { background-color: #FFF9C4; }
+.cell-amounts { flex-direction: column; margin-top: 2px; }
+.income-text { font-size: 16px; color: #2E7D32; }
+.expense-text { font-size: 16px; color: #c62828; }
+
+.month-summary { flex-direction: row; justify-content: space-around; align-items: center; height: 70px; background-color: #f9f9f9; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
+.summary-label { font-size: 24px; color: #333; font-weight: bold; }
+
+/* 统计视图 */
+.stat-view { flex: 1; flex-direction: column; padding: 10px; background-color: #f5f5f5; }
+.stat-header { height: 70px; flex-direction: row; align-items: center; justify-content: space-between; background-color: #fff; border-bottom: 1px solid #e0e0e0; padding: 0 20px; margin-bottom: 10px; }
+.icon-btn { width: 60px; height: 60px; justify-content: center; align-items: center; }
+.icon-btn text { font-size: 40px; color: #0f8de8; }
+.stat-month-title { font-size: 30px; font-weight: bold; color: #333; }
+
+.stat-card { flex-direction: column; background-color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0px 2px 6px rgba(0,0,0,0.1); }
+
+.card-top-row { flex-direction: row; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.balance-block { flex-direction: column; }
+.balance-label { font-size: 24px; color: #666; margin-bottom: 5px; }
+.balance-amount { font-size: 48px; color: #E53935; font-weight: bold; }
+.prev-balance-block { flex-direction: column; align-items: flex-end; }
+.prev-label { font-size: 22px; color: #999; }
+.prev-amount { font-size: 28px; color: #999; margin-top: 5px; }
+
+.progress-bars { flex-direction: column; margin-top: 10px; }
+.progress-row { flex-direction: row; align-items: center; margin: 10px 0; }
+.progress-label { width: 60px; font-size: 24px; color: #666; }
+.progress-bar { height: 22px; border-radius: 11px; margin: 0 10px; }
+.progress-value { font-size: 24px; color: #333; font-weight: bold; margin-left: 10px; }
+
+.card-title { font-size: 28px; font-weight: bold; color: #333; margin-bottom: 15px; }
+.trend-block { flex-direction: column; margin-bottom: 15px; }
+.trend-label { font-size: 22px; color: #999; margin-bottom: 5px; }
+.trend-highlight { font-size: 28px; color: #E53935; font-weight: bold; }
+
+.trend-stats { flex-direction: row; justify-content: space-around; margin: 20px 0; padding: 15px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
+.trend-stat-item { flex-direction: column; align-items: center; }
+.stat-label { font-size: 20px; color: #999; margin-bottom: 8px; }
+.stat-value { font-size: 32px; color: #333; font-weight: bold; }
+
+.chart-container { flex-direction: row; align-items: flex-end; height: 130px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
+.chart-bar { width: 14px; margin-right: 6px; background-color: #EF5350; border-radius: 4px 4px 0 0; justify-content: flex-end; align-items: center; }
+.bar-amount { font-size: 14px; color: #333; margin-bottom: 2px; }
+.bar-date { font-size: 14px; color: #666; margin-top: 4px; margin-bottom: 2px; }
+
+/* 底部导航 */
+.bottom-bar { height: 100px; flex-direction: row; justify-content: space-around; align-items: center; background-color: #ffffff; border-top: 1px solid #e0e0e0; padding-bottom: 10px; }
+.tab-item { flex: 1; align-items: center; justify-content: center; }
+.tab-text { font-size: 28px; color: #999; }
+.active .tab-text { color: #0f8de8; font-weight: bold; }
+.add-btn { width: 90px; height: 90px; border-radius: 45px; background-color: #0f8de8; justify-content: center; align-items: center; margin-bottom: 10px; }
+.add-icon { font-size: 48px; color: #ffffff; font-weight: bold; }
 </style>
