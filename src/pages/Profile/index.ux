@@ -1,0 +1,247 @@
+<template>
+  <div class="profile">
+    <!-- 头部 -->
+    <div class="header">
+      <div class="back-btn" @click="goBack"><text>‹ 返回</text></div>
+      <text class="page-title">我的</text>
+      <div class="header-space"></div>
+    </div>
+
+    <!-- 用户信息卡片 -->
+    <div class="user-card">
+      <div class="avatar">
+        <text class="avatar-icon">👤</text>
+      </div>
+      <text class="nickname">某用户</text>
+      <text class="user-id">ID: 20250001</text>
+    </div>
+
+    <!-- 数据统计 -->
+    <div class="stats-card">
+      <div class="stat-item">
+        <text class="stat-num">{{totalEvents}}</text>
+        <text class="stat-label">总日程</text>
+      </div>
+      <div class="stat-item">
+        <text class="stat-num">{{totalRecords}}</text>
+        <text class="stat-label">记账笔数</text>
+      </div>
+      <div class="stat-item">
+        <text class="stat-num">{{totalExpense}}</text>
+        <text class="stat-label">总支出</text>
+      </div>
+    </div>
+
+    <!-- 功能列表 -->
+    <div class="menu-list">
+      <div class="menu-item" @click="goToMonthView">
+        <text class="menu-text">📅 月视图日历</text>
+        <text class="menu-arrow">›</text>
+      </div>
+      <div class="menu-item" @click="clearData">
+        <text class="menu-text">🗑️ 清除所有数据</text>
+        <text class="menu-arrow">›</text>
+      </div>
+      <div class="menu-item" @click="showAbout">
+        <text class="menu-text">ℹ️ 关于应用</text>
+        <text class="menu-arrow">›</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import prompt from '@system.prompt'
+
+export default {
+  data: {
+    totalEvents: 0,
+    totalRecords: 0,
+    totalExpense: '0.00'
+  },
+  onInit() {
+    this.loadStats()
+  },
+  loadStats() {
+    storage.get({
+      key: 'events',
+      success: (value) => {
+        let events = []
+        if (value) {
+          try { events = JSON.parse(value) || [] } catch(e) {}
+        }
+        this.totalEvents = events.length
+        const records = events.filter(e => e.amount && e.amount > 0)
+        this.totalRecords = records.length
+        const totalExpense = records
+          .filter(e => e.type !== 'income')
+          .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+        this.totalExpense = totalExpense.toFixed(2)
+      },
+      fail: () => {}
+    })
+  },
+  goBack() {
+    router.back()
+  },
+  goToMonthView() {
+    router.push({ uri: 'pages/MonthView' })
+  },
+  clearData() {
+    prompt.showDialog({
+      title: '确认清除',
+      message: '将删除所有日程和记账数据，此操作不可恢复！',
+      buttons: [
+        { text: '取消' },
+        { text: '确定', color: '#E53935' }
+      ],
+      success: (res) => {
+        if (res.index === 1) {
+          storage.delete({
+            key: 'events',
+            success: () => {
+              prompt.showToast({ message: '数据已清除' })
+              this.loadStats()
+            }
+          })
+        }
+      }
+    })
+  },
+  showAbout() {
+    prompt.showDialog({
+      title: '关于应用',
+      message: '我在 v1.5\n集日程管理、记账、AI助手于一体的小程序。',
+      buttons: [{ text: '知道了' }]
+    })
+  }
+}
+</script>
+
+<style>
+.profile {
+  flex: 1;
+  flex-direction: column;
+  background-color: #f5f5f5;
+}
+
+.header {
+  height: 80px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 15px;
+}
+
+.back-btn {
+  width: 120px;
+  height: 60px;
+  justify-content: center;
+  align-items: center;
+}
+.back-btn text {
+  font-size: 30px;
+  color: #0f8de8;
+  font-weight: bold;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
+}
+
+.header-space {
+  width: 120px;
+}
+
+/* 用户卡片 */
+.user-card {
+  flex-direction: column;
+  align-items: center;
+  background-color: #ffffff;
+  padding: 30px 20px;
+  margin-bottom: 15px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50px;
+  background-color: #e8f4fd;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.avatar-icon {
+  font-size: 50px;
+}
+
+.nickname {
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.user-id {
+  font-size: 24px;
+  color: #999;
+}
+
+/* 数据统计 */
+.stats-card {
+  flex-direction: row;
+  justify-content: space-around;
+  background-color: #ffffff;
+  padding: 20px;
+  margin-bottom: 15px;
+}
+
+.stat-item {
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-num {
+  font-size: 36px;
+  font-weight: bold;
+  color: #0f8de8;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 24px;
+  color: #666;
+}
+
+/* 菜单列表 */
+.menu-list {
+  flex-direction: column;
+  background-color: #ffffff;
+}
+
+.menu-item {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  height: 90px;
+  padding: 0 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.menu-text {
+  font-size: 28px;
+  color: #333;
+}
+
+.menu-arrow {
+  font-size: 36px;
+  color: #ccc;
+}
+</style>

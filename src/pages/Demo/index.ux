@@ -6,17 +6,21 @@
   <div class="container">
     <!-- 内容区域 -->
     <div class="content">
-      <calendar if="{{currentIndex === 0}}" events="{{events}}"></calendar>
+      <calendar if="{{currentIndex === 0}}"></calendar>
       <accounting if="{{currentIndex === 1}}"></accounting>
       <ai-assistant if="{{currentIndex === 2}}" events="{{events}}" onadd-event="addEvent"></ai-assistant>
+      <!-- 个人页面留在主界面内，用组件方式引入更简单，但也可以通过底部切换 -->
+      <div class="profile-placeholder" if="{{currentIndex === 3}}">
+        <text class="profile-tip">个人中心开发中</text>
+      </div>
     </div>
 
     <!-- 底部导航栏 -->
     <div class="bottom-bar">
       <div 
-        for="{{(index, item) in tabList}}" 
-        class="tab-item {{currentIndex === index ? 'tab-active' : ''}}" 
-        @click="switchTab(index)">
+        class="tab-item {{currentIndex === idx ? 'tab-active' : ''}}" 
+        for="{{(idx, item) in tabList}}" 
+        @click="switchTab(idx)">
         <text class="tab-icon">{{item.icon}}</text>
         <text class="tab-text">{{item.name}}</text>
       </div>
@@ -26,6 +30,7 @@
 
 <script>
 import storage from '@system.storage'
+import router from '@system.router'
 
 export default {
   data: {
@@ -33,7 +38,8 @@ export default {
     tabList: [
       { name: '日程', icon: '📅' },
       { name: '记账', icon: '💰' },
-      { name: 'AI助手', icon: '🤖' }
+      { name: 'AI助手', icon: '🤖' },
+      { name: '我的', icon: '👤' }
     ],
     events: []
   },
@@ -41,7 +47,6 @@ export default {
     this.loadEvents()
   },
   onShow() {
-    // 从编辑页面返回时刷新日程
     this.loadEvents()
   },
   loadEvents() {
@@ -64,7 +69,6 @@ export default {
     })
   },
   addEvent(evt) {
-    // 仅用于AI助手自动添加事件
     if (evt.detail) {
       const event = evt.detail
       event.id = Date.now().toString()
@@ -85,8 +89,12 @@ export default {
     const colors = ['#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0']
     return colors[Math.floor(Math.random() * colors.length)]
   },
-  switchTab(index) {
-    this.currentIndex = index
+  switchTab(idx) {
+    this.currentIndex = idx
+    // 点击“我的”时跳转到个人页面
+    if (idx === 3) {
+      router.push({ uri: 'pages/Profile' })
+    }
   }
 }
 </script>
@@ -100,7 +108,16 @@ export default {
 
 .content {
   flex: 1;
-  /* 内容区占满剩余空间，底部栏高度固定 */
+}
+
+.profile-placeholder {
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+}
+.profile-tip {
+  font-size: 30px;
+  color: #999;
 }
 
 .bottom-bar {
@@ -110,7 +127,7 @@ export default {
   align-items: center;
   background-color: #ffffff;
   border-top: 1px solid #e0e0e0;
-  padding-bottom: 10px; /* 适配底部安全区 */
+  padding-bottom: 10px;
 }
 
 .tab-item {
@@ -122,12 +139,12 @@ export default {
 }
 
 .tab-icon {
-  font-size: 40px;
+  font-size: 36px;
   margin-bottom: 4px;
 }
 
 .tab-text {
-  font-size: 24px;
+  font-size: 22px;
   color: #999;
 }
 

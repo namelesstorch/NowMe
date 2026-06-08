@@ -1,15 +1,14 @@
 <template>
   <div class="month-view">
-    <!-- 头部：返回按钮 + 月份切换 -->
+    <!-- 头部：返回 + 月份切换（翻页在标题两侧） -->
     <div class="header">
-      <div class="left-section">
-        <div class="back-btn" @click="goBack"><text>‹</text></div>
-      </div>
-      <text class="month-title">{{year}}年{{month+1}}月</text>
-      <div class="right-section">
+      <div class="back-btn" @click="goBack"><text>返回</text></div>
+      <div class="month-nav">
         <div class="arrow" @click="prevMonth"><text>‹</text></div>
+        <text class="month-title">{{year}}年{{month+1}}月</text>
         <div class="arrow" @click="nextMonth"><text>›</text></div>
       </div>
+      <div class="header-space"></div>
     </div>
 
     <!-- 日期卡片列表 -->
@@ -240,32 +239,104 @@ export default {
 </script>
 
 <style>
-/* 样式不变 */
 .month-view { flex: 1; flex-direction: column; background-color: #f5f5f5; }
-.header { height: 80px; flex-direction: row; align-items: center; justify-content: space-between; background-color: #ffffff; border-bottom: 1px solid #e0e0e0; padding: 0 10px; }
-.left-section, .right-section { flex-direction: row; align-items: center; }
-.back-btn { width: 60px; height: 60px; justify-content: center; align-items: center; }
-.back-btn text { font-size: 40px; color: #0f8de8; }
-.arrow { padding: 10px; }
-.arrow text { font-size: 40px; color: #0f8de8; }
-.month-title { font-size: 30px; font-weight: bold; }
-.event-list { flex: 1; flex-direction: column; padding: 10px; }
-.day-card { flex-direction: column; background-color: #ffffff; border-radius: 12px; margin-bottom: 15px; padding: 15px; box-shadow: 0px 2px 6px rgba(0,0,0,0.1); }
-.date-row { flex-direction: row; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px dashed #e0e0e0; margin-bottom: 10px; }
+
+/* 头部 */
+.header {
+  height: 80px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 15px;
+}
+
+.back-btn {
+  width: 100px;
+  height: 60px;
+  justify-content: center;
+  align-items: center;
+}
+.back-btn text {
+  font-size: 28px;
+  color: #0f8de8;
+  font-weight: bold;
+}
+
+.month-nav {
+  flex-direction: row;
+  align-items: center;
+}
+
+.arrow {
+  width: 50px;
+  height: 60px;
+  justify-content: center;
+  align-items: center;
+}
+.arrow text {
+  font-size: 40px;
+  color: #0f8de8;
+}
+
+.month-title {
+  font-size: 30px;
+  font-weight: bold;
+  margin: 0 15px;
+}
+
+.header-space {
+  width: 100px; /* 与左侧返回按钮对称，保持标题居中 */
+}
+
+/* 事件列表 */
+.event-list {
+  flex: 1;
+  flex-direction: column;
+  padding: 10px;
+}
+
+.day-card {
+  flex-direction: column;
+  background-color: #ffffff;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  padding: 15px;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+}
+
+.date-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e0e0e0;
+  margin-bottom: 10px;
+}
 .date-left { flex-direction: column; }
 .date-num { font-size: 36px; font-weight: bold; color: #333; }
 .date-week { font-size: 22px; color: #999; margin-top: 2px; }
 .date-right { align-items: flex-end; }
 .lunar-text { font-size: 26px; color: #666; }
-.event-row { flex-direction: row; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+
+.event-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
 .event-row:last-child { border-bottom: none; }
 .event-left { flex: 1; flex-direction: column; margin-right: 10px; }
 .event-title { font-size: 28px; color: #333; font-weight: bold; }
 .event-location { font-size: 22px; color: #888; margin-top: 4px; }
 .event-right { align-items: flex-end; }
 .event-time { font-size: 24px; color: #0f8de8; font-weight: bold; }
+
 .empty-event { padding: 10px 0; align-items: center; }
 .empty-text { font-size: 24px; color: #ccc; }
+
 .no-data { flex: 1; justify-content: center; align-items: center; }
 .no-data text { font-size: 30px; color: #999; }
 </style>

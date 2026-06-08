@@ -1,0 +1,248 @@
+<template>
+  <div class="add-record">
+    <div class="header">
+      <div class="back-btn" @click="goBack"><text>‹ 返回</text></div>
+      <text class="page-title">添加记账</text>
+    </div>
+
+    <div class="form-area">
+      <div class="form-row">
+        <text class="label">日期</text>
+        <input class="input" value="{{date}}" @change="dateChange" />
+      </div>
+
+      <div class="form-row">
+        <text class="label">事件</text>
+        <input class="input" value="{{title}}" @change="titleChange" />
+      </div>
+
+      <div class="form-row">
+        <text class="label">类型</text>
+        <div class="type-switch">
+          <div 
+            class="type-btn {{type === 'expense' ? 'type-expense-active' : ''}}" 
+            @click="setType('expense')">
+            <text>支出</text>
+          </div>
+          <div 
+            class="type-btn {{type === 'income' ? 'type-income-active' : ''}}" 
+            @click="setType('income')">
+            <text>收入</text>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <text class="label">金额</text>
+        <input class="input" value="{{amount}}" @change="amountChange" />
+      </div>
+
+      <div class="save-btn" @click="saveRecord">
+        <text>保存</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import prompt from '@system.prompt'
+
+export default {
+  data: {
+    date: '',
+    title: '',
+    type: 'expense',
+    amount: ''
+  },
+  onInit() {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = (now.getMonth() + 1).toString().padStart(2, '0')
+    const d = now.getDate().toString().padStart(2, '0')
+    this.date = `${y}-${m}-${d}`
+  },
+  dateChange(e) { this.date = e.value },
+  titleChange(e) { this.title = e.value },
+  amountChange(e) { this.amount = e.value },
+  setType(type) { this.type = type },
+  goBack() { router.back() },
+  saveRecord() {
+    if (!this.title.trim()) {
+      prompt.showToast({ message: '请输入事件描述' })
+      return
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(this.date)) {
+      prompt.showToast({ message: '日期格式错误，请使用 YYYY-MM-DD' })
+      return
+    }
+    const amount = parseFloat(this.amount)
+    if (isNaN(amount) || amount <= 0) {
+      prompt.showToast({ message: '请输入有效的金额' })
+      return
+    }
+
+    const record = {
+      id: Date.now().toString(),
+      date: this.date,
+      title: this.title.trim(),
+      type: this.type,
+      amount: amount,
+      category: '',
+      location: '',
+      startHour: 0,
+      startMinute: 0,
+      endHour: 0,
+      endMinute: 0,
+      color: this.randomColor()
+    }
+
+    storage.get({
+      key: 'events',
+      success: (value) => {
+        let events = []
+        if (value) {
+          try { events = JSON.parse(value) || [] } catch(e) {}
+        }
+        events.push(record)
+        storage.set({
+          key: 'events',
+          value: JSON.stringify(events),
+          success: () => {
+            prompt.showToast({ message: '保存成功' })
+            router.back()
+          },
+          fail: () => prompt.showToast({ message: '保存失败' })
+        })
+      },
+      fail: () => {
+        storage.set({
+          key: 'events',
+          value: JSON.stringify([record]),
+          success: () => {
+            prompt.showToast({ message: '保存成功' })
+            router.back()
+          },
+          fail: () => prompt.showToast({ message: '保存失败' })
+        })
+      }
+    })
+  },
+  randomColor() {
+    const colors = ['#F44336','#E91E63','#9C27B0','#673AB7','#3F51B5','#2196F3','#00BCD4','#009688','#4CAF50','#FF9800']
+    return colors[Math.floor(Math.random() * colors.length)]
+  }
+}
+</script>
+
+<style>
+.add-record {
+  flex: 1;
+  flex-direction: column;
+  background-color: #fff;
+}
+
+.header {
+  height: 80px;
+  flex-direction: row;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding: 0 15px;
+}
+
+.back-btn {
+  width: 120px;
+  height: 60px;
+  justify-content: center;
+  align-items: center;
+}
+.back-btn text {
+  font-size: 30px;
+  color: #0f8de8;
+  font-weight: bold;
+}
+
+.page-title {
+  flex: 1;
+  text-align: center;
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* 表单区域：纵向排列 */
+.form-area {
+  flex: 1;
+  flex-direction: column;
+  padding: 20px;
+}
+
+/* 每一行：标签在上，输入框在下 */
+.form-row {
+  flex-direction: column;
+  margin-bottom: 25px;
+}
+
+.label {
+  font-size: 26px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.input {
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 28px;
+}
+
+/* 类型切换按钮横向排列 */
+.type-switch {
+  flex-direction: row;
+}
+
+.type-btn {
+  width: 150px;
+  height: 70px;
+  border-radius: 35px;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f0f0;
+  margin-right: 20px;
+}
+.type-btn text {
+  font-size: 26px;
+  color: #333;
+}
+
+.type-expense-active {
+  background-color: #E53935;
+}
+.type-expense-active text {
+  color: white;
+  font-weight: bold;
+}
+
+.type-income-active {
+  background-color: #4CAF50;
+}
+.type-income-active text {
+  color: white;
+  font-weight: bold;
+}
+
+.save-btn {
+  margin-top: 40px;
+  height: 80px;
+  background-color: #0f8de8;
+  border-radius: 40px;
+  justify-content: center;
+  align-items: center;
+}
+.save-btn text {
+  font-size: 32px;
+  color: white;
+  font-weight: bold;
+}
+</style>
