@@ -13,7 +13,9 @@
       </div>
 
       <div class="calendar-grid">
-        <div class="calendar-cell {{cell.cellClass}}" for="{{cell in calendarCells}}">
+        <div 
+          class="calendar-cell {{cell.cellClass}}" 
+          for="{{cell in calendarCells}}">
           <text class="cell-date">{{cell.day}}</text>
           <div class="cell-amounts" if="{{cell.isCurrentMonth && (cell.income > 0 || cell.expense > 0)}}">
             <text class="income-text" if="{{cell.income > 0}}">收: ¥{{cell.incomeStr}}</text>
@@ -36,66 +38,99 @@
         <div class="icon-btn" @click="nextStatMonth"><text>›</text></div>
       </div>
 
-      <div class="stat-card">
-        <div class="card-top-row">
-          <div class="balance-block">
-            <text class="balance-label">本月结余</text>
-            <text class="balance-amount">{{statSummary.balanceStr}}</text>
+      <div class="stat-content">
+        <!-- 收支概览卡片 -->
+        <div class="stat-card">
+          <div class="card-top-row">
+            <div class="balance-block">
+              <text class="balance-label">本月结余</text>
+              <text class="balance-amount">{{statSummary.balanceStr}}</text>
+            </div>
+            <div class="prev-balance-block">
+              <text class="prev-label">上月结余：</text>
+              <text class="prev-amount">{{statSummary.prevBalanceStr}}</text>
+            </div>
           </div>
-          <div class="prev-balance-block">
-            <text class="prev-label">上月结余：</text>
-            <text class="prev-amount">{{statSummary.prevBalanceStr}}</text>
+          <div class="progress-bars">
+            <div class="progress-row">
+              <text class="progress-label">支出</text>
+              <div class="progress-bar" style="width: {{statSummary.expenseBarWidth}}px; background-color: #FFC107;"></div>
+              <text class="progress-value">¥{{statSummary.monthExpenseStr}}</text>
+            </div>
+            <div class="progress-row">
+              <text class="progress-label">收入</text>
+              <div class="progress-bar" style="width: {{statSummary.incomeBarWidth}}px; background-color: #EF5350;"></div>
+              <text class="progress-value">¥{{statSummary.monthIncomeStr}}</text>
+            </div>
           </div>
         </div>
-        <div class="progress-bars">
-          <div class="progress-row">
-            <text class="progress-label">支出</text>
-            <div class="progress-bar expense-bar" style="width: {{statSummary.expensePercent}}%; background-color: #FFC107;"></div>
-            <text class="progress-value">¥{{statSummary.monthExpenseStr}}</text>
-          </div>
-          <div class="progress-row">
-            <text class="progress-label">收入</text>
-            <div class="progress-bar income-bar" style="width: {{statSummary.incomePercent}}%; background-color: #EF5350;"></div>
-            <text class="progress-value">¥{{statSummary.monthIncomeStr}}</text>
-          </div>
-        </div>
-      </div>
 
-      <div class="stat-card">
-        <text class="card-title">支出趋势概况</text>
-        <div class="trend-block">
-          <text class="trend-label">本月单日最高支出</text>
-          <text class="trend-highlight">{{statSummary.maxExpenseDate}} 支出 ¥{{statSummary.maxExpenseStr}}</text>
+        <!-- 支出趋势卡片 -->
+        <div class="stat-card">
+          <text class="card-title">支出趋势概况</text>
+          <div class="trend-block">
+            <text class="trend-label">本月单日最高支出</text>
+            <text class="trend-highlight">{{statSummary.maxExpenseDate}} 支出 ¥{{statSummary.maxExpenseStr}}</text>
+          </div>
+          <div class="trend-stats">
+            <div class="trend-stat-item">
+              <text class="stat-label">本月每日平均支出</text>
+              <text class="stat-value">{{statSummary.avgExpenseStr}}</text>
+            </div>
+            <div class="trend-stat-item">
+              <text class="stat-label">本月支出总笔数</text>
+              <text class="stat-value">{{statSummary.expenseCount}}</text>
+            </div>
+          </div>
+          <scroll scroll-x="true" class="chart-scroll">
+            <div class="chart-container">
+              <div class="chart-bar-wrapper" for="{{item in statSummary.expenseBars}}">
+                <div class="chart-bar" style="height: {{item.height}}px;"></div>
+                <text class="bar-date" if="{{item.showDate}}">{{item.day}}</text>
+              </div>
+            </div>
+          </scroll>
         </div>
-        <div class="trend-stats">
-          <div class="trend-stat-item">
-            <text class="stat-label">本月每日平均支出</text>
-            <text class="stat-value">{{statSummary.avgExpenseStr}}</text>
+
+        <!-- 收入趋势卡片 -->
+        <div class="stat-card">
+          <text class="card-title">收入趋势概况</text>
+          <div class="trend-block">
+            <text class="trend-label">本月单日最高收入</text>
+            <text class="trend-highlight">{{statSummary.maxIncomeDate}} 收入 ¥{{statSummary.maxIncomeStr}}</text>
           </div>
-          <div class="trend-stat-item">
-            <text class="stat-label">本月支出总笔数</text>
-            <text class="stat-value">{{statSummary.expenseCount}}</text>
+          <div class="trend-stats">
+            <div class="trend-stat-item">
+              <text class="stat-label">本月每日平均收入</text>
+              <text class="stat-value">{{statSummary.avgIncomeStr}}</text>
+            </div>
+            <div class="trend-stat-item">
+              <text class="stat-label">本月收入总笔数</text>
+              <text class="stat-value">{{statSummary.incomeCount}}</text>
+            </div>
           </div>
-        </div>
-        <div class="chart-container">
-          <div class="chart-bar" for="{{item in statSummary.dailyBars}}" style="height: {{item.height}}px;">
-            <text class="bar-amount" if="{{item.amount > 0}}">{{item.amountStr}}</text>
-            <text class="bar-date">{{item.day}}</text>
-          </div>
+          <scroll scroll-x="true" class="chart-scroll">
+            <div class="chart-container">
+              <div class="chart-bar-wrapper" for="{{item in statSummary.incomeBars}}">
+                <div class="chart-bar income-chart-bar" style="height: {{item.height}}px;"></div>
+                <text class="bar-date" if="{{item.showDate}}">{{item.day}}</text>
+              </div>
+            </div>
+          </scroll>
         </div>
       </div>
     </div>
 
     <!-- 底部导航栏 -->
     <div class="bottom-bar">
-      <div class="tab-item {{currentTab === 'detail' ? 'active' : ''}}" @click="switchTab('detail')">
-        <text class="tab-text">明细</text>
+      <div class="tab-item" @click="switchToDetail">
+        <text class="tab-text" style="color: {{currentTab === 'detail' ? '#0f8de8' : '#999'}}; font-weight: {{currentTab === 'detail' ? 'bold' : 'normal'}};">明细</text>
       </div>
       <div class="add-btn" @click="addRecord">
         <text class="add-icon">+</text>
       </div>
-      <div class="tab-item {{currentTab === 'stat' ? 'active' : ''}}" @click="switchTab('stat')">
-        <text class="tab-text">统计</text>
+      <div class="tab-item" @click="switchToStat">
+        <text class="tab-text" style="color: {{currentTab === 'stat' ? '#0f8de8' : '#999'}}; font-weight: {{currentTab === 'stat' ? 'bold' : 'normal'}};">统计</text>
       </div>
     </div>
   </div>
@@ -104,6 +139,7 @@
 <script>
 import storage from '@system.storage'
 import prompt from '@system.prompt'
+import router from '@system.router'
 
 export default {
   data: {
@@ -121,13 +157,18 @@ export default {
       prevBalanceStr: '0.00',
       monthExpenseStr: '0.00',
       monthIncomeStr: '0.00',
-      expensePercent: 0,
-      incomePercent: 0,
+      expenseBarWidth: 0,
+      incomeBarWidth: 0,
       maxExpenseDate: '--',
       maxExpenseStr: '0.00',
       avgExpenseStr: '0.00',
       expenseCount: 0,
-      dailyBars: []
+      maxIncomeDate: '--',
+      maxIncomeStr: '0.00',
+      avgIncomeStr: '0.00',
+      incomeCount: 0,
+      expenseBars: [],
+      incomeBars: []
     },
     currentTab: 'detail'
   },
@@ -143,132 +184,68 @@ export default {
       success: (value) => {
         let events = []
         if (value) {
-          try {
-            events = JSON.parse(value) || []
-          } catch(e) {}
+          try { events = JSON.parse(value) || [] } catch(e) {}
         }
         this.events = events
         this.buildCalendar()
-        if (this.currentTab === 'stat') {
-          this.buildStat()
-        }
+        if (this.currentTab === 'stat') this.buildStat()
       },
       fail: () => {
         this.events = []
         this.buildCalendar()
-        if (this.currentTab === 'stat') {
-          this.buildStat()
-        }
+        if (this.currentTab === 'stat') this.buildStat()
       }
     })
   },
-
-  // ================= 明细日历逻辑 =================
   buildCalendar() {
     try {
       const year = this.currentYear
       const month = this.currentMonth
       const daysInMonth = new Date(year, month, 0).getDate()
       const firstDayOfWeek = new Date(year, month - 1, 1).getDay()
-
       const prevMonthDays = firstDayOfWeek
       const prevMonthYear = month === 1 ? year - 1 : year
       const prevMonth = month === 1 ? 12 : month - 1
       const prevMonthTotalDays = new Date(prevMonthYear, prevMonth, 0).getDate()
-
       const totalCells = 42
       const nextDays = totalCells - prevMonthDays - daysInMonth
 
       const cells = []
-      // 前补上月日期
       for (let i = 0; i < prevMonthDays; i++) {
-        cells.push({
-          day: prevMonthTotalDays - prevMonthDays + i + 1,
-          isCurrentMonth: false,
-          income: 0,
-          expense: 0
-        })
+        cells.push({ day: prevMonthTotalDays - prevMonthDays + i + 1, isCurrentMonth: false, income: 0, expense: 0 })
       }
-
       const monthPrefix = `${year}-${month.toString().padStart(2, '0')}`
-      let totalIncome = 0
-      let totalExpense = 0
-
+      let totalIncome = 0, totalExpense = 0
       for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${monthPrefix}-${d.toString().padStart(2, '0')}`
-        const dayIncome = this.events
-          .filter(e => e.date === dateStr && e.type === 'income')
-          .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
-        const dayExpense = this.events
-          .filter(e => e.date === dateStr && e.type !== 'income')
-          .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+        const dayIncome = this.events.filter(e => e.date === dateStr && e.type === 'income').reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+        const dayExpense = this.events.filter(e => e.date === dateStr && e.type !== 'income').reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
         totalIncome += dayIncome
         totalExpense += dayExpense
-
-        cells.push({
-          day: d,
-          isCurrentMonth: true,
-          income: dayIncome,
-          expense: dayExpense,
-          incomeStr: dayIncome.toFixed(2),
-          expenseStr: dayExpense.toFixed(2),
-          cellClass: (dayIncome > 0 || dayExpense > 0) ? 'active-cell' : 'inactive-cell'
-        })
+        cells.push({ day: d, isCurrentMonth: true, income: dayIncome, expense: dayExpense, incomeStr: dayIncome.toFixed(2), expenseStr: dayExpense.toFixed(2), cellClass: (dayIncome > 0 || dayExpense > 0) ? 'active-cell' : 'inactive-cell' })
       }
-
-      // 后补下月日期
       for (let d = 1; d <= nextDays; d++) {
-        cells.push({
-          day: d,
-          isCurrentMonth: false,
-          income: 0,
-          expense: 0
-        })
+        cells.push({ day: d, isCurrentMonth: false, income: 0, expense: 0 })
       }
-
       this.calendarCells = cells
       this.monthIncome = totalIncome.toFixed(2)
       this.monthExpense = totalExpense.toFixed(2)
-    } catch(e) {
-      console.error('buildCalendar error:', e)
-    }
+    } catch(e) {}
   },
   prevMonth() {
-    if (this.currentMonth === 1) {
-      this.currentYear -= 1
-      this.currentMonth = 12
-    } else {
-      this.currentMonth -= 1
-    }
+    if (this.currentMonth === 1) { this.currentYear -= 1; this.currentMonth = 12 } else this.currentMonth -= 1
     this.buildCalendar()
   },
   nextMonth() {
-    if (this.currentMonth === 12) {
-      this.currentYear += 1
-      this.currentMonth = 1
-    } else {
-      this.currentMonth += 1
-    }
+    if (this.currentMonth === 12) { this.currentYear += 1; this.currentMonth = 1 } else this.currentMonth += 1
     this.buildCalendar()
   },
-
-  // ================= 统计逻辑 =================
   prevStatMonth() {
-    if (this.statMonth === 1) {
-      this.statYear -= 1
-      this.statMonth = 12
-    } else {
-      this.statMonth -= 1
-    }
+    if (this.statMonth === 1) { this.statYear -= 1; this.statMonth = 12 } else this.statMonth -= 1
     this.buildStat()
   },
   nextStatMonth() {
-    if (this.statMonth === 12) {
-      this.statYear += 1
-      this.statMonth = 1
-    } else {
-      this.statMonth += 1
-    }
+    if (this.statMonth === 12) { this.statYear += 1; this.statMonth = 1 } else this.statMonth += 1
     this.buildStat()
   },
   buildStat() {
@@ -276,11 +253,14 @@ export default {
       const year = this.statYear
       const month = this.statMonth
       const monthPrefix = `${year}-${month.toString().padStart(2, '0')}`
+      const prevMonthYear = month === 1 ? year - 1 : year
+      const prevMonth = month === 1 ? 12 : month - 1
+      const prevMonthPrefix = `${prevMonthYear}-${prevMonth.toString().padStart(2, '0')}`
 
-      let monthIncome = 0
-      let monthExpense = 0
-      let expenseCount = 0
+      let monthIncome = 0, monthExpense = 0, expenseCount = 0, incomeCount = 0
       const dailyExpense = {}
+      const dailyIncome = {}
+      let prevIncome = 0, prevExpense = 0
 
       this.events.forEach(e => {
         if (!e.date || !e.amount) return
@@ -288,86 +268,86 @@ export default {
         if (e.date.startsWith(monthPrefix)) {
           if (e.type === 'income') {
             monthIncome += amount
+            incomeCount++
+            const day = parseInt(e.date.split('-')[2])
+            dailyIncome[day] = (dailyIncome[day] || 0) + amount
           } else {
             monthExpense += amount
             expenseCount++
             const day = parseInt(e.date.split('-')[2])
             dailyExpense[day] = (dailyExpense[day] || 0) + amount
           }
+        } else if (e.date.startsWith(prevMonthPrefix)) {
+          if (e.type === 'income') prevIncome += amount
+          else prevExpense += amount
         }
       })
 
-      // 上月结余
-      const firstDayOfMonth = `${monthPrefix}-01`
-      let prevBalance = 0
-      this.events.forEach(e => {
-        if (e.date && e.date < firstDayOfMonth) {
-          const amount = parseFloat(e.amount) || 0
-          prevBalance += (e.type === 'income' ? amount : -amount)
-        }
-      })
+      const prevBalance = prevIncome - prevExpense
+      const balance = monthIncome - monthExpense
 
-      const balance = prevBalance + monthIncome - monthExpense
-
-      // 柱状图数据
       const daysInMonth = new Date(year, month, 0).getDate()
-      const dailyBars = []
-      let maxExpense = 0
-      let maxExpenseDate = ''
-      let totalExpenseForAvg = 0
+
+      const expenseBars = []
+      let maxExpense = 0, maxExpenseDate = ''
       for (let d = 1; d <= daysInMonth; d++) {
-        const expense = dailyExpense[d] || 0
-        totalExpenseForAvg += expense
-        dailyBars.push({
-          day: d,
-          amount: expense,
-          amountStr: expense > 0 ? expense.toFixed(2) : ''
-        })
-        if (expense > maxExpense) {
-          maxExpense = expense
-          maxExpenseDate = `${month}月${d}日`
-        }
+        const amount = dailyExpense[d] || 0
+        if (amount > maxExpense) { maxExpense = amount; maxExpenseDate = `${month}月${d}日` }
+        expenseBars.push({ day: d, amount: amount, showDate: [1,5,10,15,20,25,30].includes(d) })
       }
+      const maxBarHeight = 80
+      const maxForExpense = maxExpense || 1
+      expenseBars.forEach(bar => { bar.height = Math.round((bar.amount / maxForExpense) * maxBarHeight) })
 
-      const maxBarHeight = 100
-      const maxAmount = maxExpense || 1
-      dailyBars.forEach(bar => {
-        bar.height = Math.round((bar.amount / maxAmount) * maxBarHeight)
-      })
+      const incomeBars = []
+      let maxIncome = 0, maxIncomeDate = ''
+      for (let d = 1; d <= daysInMonth; d++) {
+        const amount = dailyIncome[d] || 0
+        if (amount > maxIncome) { maxIncome = amount; maxIncomeDate = `${month}月${d}日` }
+        incomeBars.push({ day: d, amount: amount, showDate: [1,5,10,15,20,25,30].includes(d) })
+      }
+      const maxForIncome = maxIncome || 1
+      incomeBars.forEach(bar => { bar.height = Math.round((bar.amount / maxForIncome) * maxBarHeight) })
 
-      const avgExpense = daysInMonth > 0 ? totalExpenseForAvg / daysInMonth : 0
+      const avgExpense = daysInMonth > 0 ? (monthExpense / daysInMonth) : 0
+      const avgIncome = daysInMonth > 0 ? (monthIncome / daysInMonth) : 0
 
-      const maxForProgress = Math.max(monthExpense, monthIncome, 1)
-      const expensePercent = Math.round((monthExpense / maxForProgress) * 100)
-      const incomePercent = Math.round((monthIncome / maxForProgress) * 100)
+      const maxAmount = Math.max(monthExpense, monthIncome, 1)
+      const maxBarPx = 200
+      const expenseBarWidth = Math.round((monthExpense / maxAmount) * maxBarPx)
+      const incomeBarWidth = Math.round((monthIncome / maxAmount) * maxBarPx)
 
       this.statSummary = {
         balanceStr: balance.toFixed(2),
         prevBalanceStr: prevBalance.toFixed(2),
         monthExpenseStr: monthExpense.toFixed(2),
         monthIncomeStr: monthIncome.toFixed(2),
-        expensePercent: expensePercent,
-        incomePercent: incomePercent,
+        expenseBarWidth: expenseBarWidth,
+        incomeBarWidth: incomeBarWidth,
         maxExpenseDate: maxExpenseDate,
         maxExpenseStr: maxExpense.toFixed(2),
         avgExpenseStr: avgExpense.toFixed(2),
         expenseCount: expenseCount,
-        dailyBars: dailyBars
+        maxIncomeDate: maxIncomeDate,
+        maxIncomeStr: maxIncome.toFixed(2),
+        avgIncomeStr: avgIncome.toFixed(2),
+        incomeCount: incomeCount,
+        expenseBars: expenseBars,
+        incomeBars: incomeBars
       }
-    } catch(e) {
-      console.error('buildStat error:', e)
-    }
+    } catch(e) {}
   },
 
-  switchTab(tab) {
-    this.currentTab = tab
-    if (tab === 'stat') {
-      this.buildStat()
-    }
+  switchToDetail() {
+    this.currentTab = 'detail'
+  },
+  switchToStat() {
+    this.currentTab = 'stat'
+    this.buildStat()
   },
 
   addRecord() {
-    prompt.showToast({ message: '添加记账功能开发中' })
+    router.push({ uri: 'pages/AddRecord' })
   }
 }
 </script>
@@ -398,7 +378,8 @@ export default {
 .summary-label { font-size: 24px; color: #333; font-weight: bold; }
 
 /* 统计视图 */
-.stat-view { flex: 1; flex-direction: column; padding: 10px; background-color: #f5f5f5; }
+.stat-view { flex: 1; flex-direction: column; background-color: #f5f5f5; }
+.stat-content { flex: 1; flex-direction: column; padding: 10px; }
 .stat-header { height: 70px; flex-direction: row; align-items: center; justify-content: space-between; background-color: #fff; border-bottom: 1px solid #e0e0e0; padding: 0 20px; margin-bottom: 10px; }
 .icon-btn { width: 60px; height: 60px; justify-content: center; align-items: center; }
 .icon-btn text { font-size: 40px; color: #0f8de8; }
@@ -418,7 +399,7 @@ export default {
 .progress-row { flex-direction: row; align-items: center; margin: 10px 0; }
 .progress-label { width: 60px; font-size: 24px; color: #666; }
 .progress-bar { height: 22px; border-radius: 11px; margin: 0 10px; }
-.progress-value { font-size: 24px; color: #333; font-weight: bold; margin-left: 10px; }
+.progress-value { width: 120px; font-size: 24px; color: #333; font-weight: bold; text-align: right; }
 
 .card-title { font-size: 28px; font-weight: bold; color: #333; margin-bottom: 15px; }
 .trend-block { flex-direction: column; margin-bottom: 15px; }
@@ -430,16 +411,17 @@ export default {
 .stat-label { font-size: 20px; color: #999; margin-bottom: 8px; }
 .stat-value { font-size: 32px; color: #333; font-weight: bold; }
 
-.chart-container { flex-direction: row; align-items: flex-end; height: 130px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
-.chart-bar { width: 14px; margin-right: 6px; background-color: #EF5350; border-radius: 4px 4px 0 0; justify-content: flex-end; align-items: center; }
-.bar-amount { font-size: 14px; color: #333; margin-bottom: 2px; }
-.bar-date { font-size: 14px; color: #666; margin-top: 4px; margin-bottom: 2px; }
+.chart-scroll { height: 120px; margin-top: 10px; }
+.chart-container { flex-direction: row; align-items: flex-end; height: 100%; padding-left: 10px; }
+.chart-bar-wrapper { flex-direction: column; align-items: center; width: 14px; margin-right: 4px; }
+.chart-bar { width: 12px; background-color: #EF5350; border-radius: 4px 4px 0 0; }
+.income-chart-bar { background-color: #4CAF50; }
+.bar-date { font-size: 12px; color: #666; margin-top: 3px; }
 
-/* 底部导航 */
-.bottom-bar { height: 100px; flex-direction: row; justify-content: space-around; align-items: center; background-color: #ffffff; border-top: 1px solid #e0e0e0; padding-bottom: 10px; }
+/* 底部导航栏 */
+.bottom-bar { height: 100px; flex-direction: row; justify-content: space-around; align-items: center; background-color: #ffffff; border-top: 1px solid #e0e0e0; }
 .tab-item { flex: 1; align-items: center; justify-content: center; }
-.tab-text { font-size: 28px; color: #999; }
-.active .tab-text { color: #0f8de8; font-weight: bold; }
-.add-btn { width: 90px; height: 90px; border-radius: 45px; background-color: #0f8de8; justify-content: center; align-items: center; margin-bottom: 10px; }
-.add-icon { font-size: 48px; color: #ffffff; font-weight: bold; }
+.tab-text { font-size: 28px; }
+.add-btn { width: 80px; height: 80px; border-radius: 40px; background-color: #0f8de8; justify-content: center; align-items: center; margin-top: 10px; }
+.add-icon { font-size: 40px; color: #ffffff; font-weight: bold; }
 </style>

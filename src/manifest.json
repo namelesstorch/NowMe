@@ -24,7 +24,9 @@
       "pages/Demo":{"component": "index"},
       "pages/EditEvent":{"component": "index"},
       "pages/AddEvent": { "component": "index" },
-      "pages/MonthView": { "component": "index" }
+      "pages/MonthView": { "component": "index" },
+      "pages/AddRecord": { "component": "index" },
+      "pages/Profile": { "component": "index" }
     }
   }
 }
