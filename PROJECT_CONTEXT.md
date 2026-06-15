@@ -56,6 +56,7 @@ npm run prettier
 ├── docs/
 │   ├── quickapp-knowledge-base.md
 │   ├── blueheart-jiuwen-knowledge-base.md
+│   ├── blueheart-edge-3b-multimodal-knowledge-base.md
 │   ├── ai-model-calling-strategy.md
 │   ├── postgresql-database-architecture.md
 │   ├── postgresql-er-diagram.mmd
@@ -346,9 +347,10 @@ tempEditEvent
 
 - `docs/quickapp-knowledge-base.md`：快应用开发速查资料，包含 manifest、路由、生命周期、组件、样式、存储、媒体、打包发布等内容。
 - `docs/blueheart-jiuwen-knowledge-base.md`：蓝心九问平台资料，包含 Bot、工具库、知识库、API 发布、鉴权、限制、错误码等信息。
+- `docs/blueheart-edge-3b-multimodal-knowledge-base.md`：主办方端侧蓝心 3B 纯文本/多模态 SDK 资料，包含 `BlueLM_3B`、`BlueLM_V_3B`、`LlmManager`、`callVit()`、prompt 模板、运行环境和快应用接入边界。
 - `docs/ai-model-calling-strategy.md`：端侧蓝心 3B、蓝心九问云端 Agent、第三方云能力和本地规则的调用分工与路由策略。
 
-后续如果要把 AI 助手从本地 mock 改成真实智能体，优先阅读蓝心九问知识库和端云模型调用策略文档。
+后续如果要把 AI 助手从本地 mock 改成真实智能体，优先阅读蓝心九问知识库、端侧 3B 多模态知识库和端云模型调用策略文档。
 
 ## 11. 当前已知问题与后续优先级
 
@@ -359,7 +361,7 @@ tempEditEvent
 3. 强化时间校验：当前可以输入非法小时/分钟、结束时间早于开始时间等。
 4. 优化路由返回：多处使用 `router.back()` 加延迟 `router.replace()` 兜底，后续可统一成更稳定的导航策略。
 5. 改进 AI 提取：当前 `mockExtractEvent()` 只支持少量中文日期和整点时间，且标题清洗比较粗糙。
-6. 接入真实语音/图片/AI 能力：`startVoice()` 和 `pickImage()` 仍是演示逻辑。
+6. 接入真实语音/图片/AI 能力：`startVoice()` 和 `pickImage()` 仍是演示逻辑；图片理解应优先评估端侧蓝心 3B 多模态 SDK，但当前快应用还需要 native bridge 或独立 native demo 接入方式。
 7. 改造记账能力：如果后续要做完整账本，应建立独立账单数据结构，而不是只依赖日程金额字段。
 8. 添加测试或至少构建校验流程：目前没有单元测试，主要依赖 `npm run build` 和真机/模拟器预览。
 
@@ -374,5 +376,5 @@ tempEditEvent
 如果要接入真实 AI 能力，可以补充：
 
 ```text
-请同时阅读 docs/blueheart-jiuwen-knowledge-base.md 和 docs/ai-model-calling-strategy.md，评估如何把 AIAssistant.ux 从本地 mock 改为端侧蓝心 3B、本地规则与蓝心九问 Agent 协同调用，并注意快应用端鉴权、网络请求、隐私和错误兜底。
+请同时阅读 docs/blueheart-jiuwen-knowledge-base.md、docs/blueheart-edge-3b-multimodal-knowledge-base.md 和 docs/ai-model-calling-strategy.md，评估如何把 AIAssistant.ux 从本地 mock 改为端侧蓝心 3B 纯文本/多模态、本地规则与蓝心九问 Agent 协同调用，并注意快应用端鉴权、native bridge、网络请求、隐私和错误兜底。
 ```
