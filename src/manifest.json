@@ -26,7 +26,8 @@
       "pages/AddEvent": { "component": "index" },
       "pages/MonthView": { "component": "index" },
       "pages/AddRecord": { "component": "index" },
-      "pages/Profile": { "component": "index" }
+      "pages/Profile": { "component": "index" },
+      "pages/RecordDetail": { "component": "index" }
     }
   }
 }

@@ -3,6 +3,7 @@
     <!-- 明细视图 -->
     <div class="detail-view" if="{{currentTab === 'detail'}}">
       <div class="header">
+        <div class="icon-btn" @click="switchToListView"><text>📋</text></div>
         <div class="arrow" @click="prevMonth"><text>‹</text></div>
         <text class="month-title">{{currentYear}}年{{currentMonth}}月</text>
         <div class="arrow" @click="nextMonth"><text>›</text></div>
@@ -222,7 +223,15 @@ export default {
         const dayExpense = this.events.filter(e => e.date === dateStr && e.type !== 'income').reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
         totalIncome += dayIncome
         totalExpense += dayExpense
-        cells.push({ day: d, isCurrentMonth: true, income: dayIncome, expense: dayExpense, incomeStr: dayIncome.toFixed(2), expenseStr: dayExpense.toFixed(2), cellClass: (dayIncome > 0 || dayExpense > 0) ? 'active-cell' : 'inactive-cell' })
+        cells.push({
+          day: d,
+          isCurrentMonth: true,
+          income: dayIncome,
+          expense: dayExpense,
+          incomeStr: dayIncome.toFixed(2),
+          expenseStr: dayExpense.toFixed(2),
+          cellClass: (dayIncome > 0 || dayExpense > 0) ? 'active-cell' : 'inactive-cell'
+        })
       }
       for (let d = 1; d <= nextDays; d++) {
         cells.push({ day: d, isCurrentMonth: false, income: 0, expense: 0 })
@@ -288,6 +297,7 @@ export default {
 
       const daysInMonth = new Date(year, month, 0).getDate()
 
+      // 支出柱状图
       const expenseBars = []
       let maxExpense = 0, maxExpenseDate = ''
       for (let d = 1; d <= daysInMonth; d++) {
@@ -296,9 +306,9 @@ export default {
         expenseBars.push({ day: d, amount: amount, showDate: [1,5,10,15,20,25,30].includes(d) })
       }
       const maxBarHeight = 80
-      const maxForExpense = maxExpense || 1
-      expenseBars.forEach(bar => { bar.height = Math.round((bar.amount / maxForExpense) * maxBarHeight) })
+      expenseBars.forEach(bar => { bar.height = Math.round((bar.amount / (maxExpense || 1)) * maxBarHeight) })
 
+      // 收入柱状图
       const incomeBars = []
       let maxIncome = 0, maxIncomeDate = ''
       for (let d = 1; d <= daysInMonth; d++) {
@@ -306,16 +316,14 @@ export default {
         if (amount > maxIncome) { maxIncome = amount; maxIncomeDate = `${month}月${d}日` }
         incomeBars.push({ day: d, amount: amount, showDate: [1,5,10,15,20,25,30].includes(d) })
       }
-      const maxForIncome = maxIncome || 1
-      incomeBars.forEach(bar => { bar.height = Math.round((bar.amount / maxForIncome) * maxBarHeight) })
+      incomeBars.forEach(bar => { bar.height = Math.round((bar.amount / (maxIncome || 1)) * maxBarHeight) })
 
       const avgExpense = daysInMonth > 0 ? (monthExpense / daysInMonth) : 0
       const avgIncome = daysInMonth > 0 ? (monthIncome / daysInMonth) : 0
 
       const maxAmount = Math.max(monthExpense, monthIncome, 1)
-      const maxBarPx = 200
-      const expenseBarWidth = Math.round((monthExpense / maxAmount) * maxBarPx)
-      const incomeBarWidth = Math.round((monthIncome / maxAmount) * maxBarPx)
+      const expenseBarWidth = Math.round((monthExpense / maxAmount) * 200)
+      const incomeBarWidth = Math.round((monthIncome / maxAmount) * 200)
 
       this.statSummary = {
         balanceStr: balance.toFixed(2),
@@ -337,17 +345,11 @@ export default {
       }
     } catch(e) {}
   },
-
-  switchToDetail() {
-    this.currentTab = 'detail'
-  },
-  switchToStat() {
-    this.currentTab = 'stat'
-    this.buildStat()
-  },
-
-  addRecord() {
-    router.push({ uri: 'pages/AddRecord' })
+  switchToDetail() { this.currentTab = 'detail' },
+  switchToStat() { this.currentTab = 'stat'; this.buildStat() },
+  addRecord() { router.push({ uri: 'pages/AddRecord' }) },
+  switchToListView() {
+    router.push({ uri: 'pages/RecordDetail' })
   }
 }
 </script>
@@ -357,10 +359,12 @@ export default {
 
 /* 明细视图 */
 .detail-view { flex: 1; flex-direction: column; }
-.header { height: 80px; flex-direction: row; align-items: center; justify-content: center; border-bottom: 1px solid #eee; }
-.arrow { padding: 20px; }
+.header { height: 80px; flex-direction: row; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eee; padding: 0 10px; }
+.icon-btn { width: 60px; height: 60px; justify-content: center; align-items: center; margin-right: 5px; }
+.icon-btn text { font-size: 36px; }
+.arrow { padding: 10px; }
 .arrow text { font-size: 40px; color: #0f8de8; }
-.month-title { font-size: 30px; font-weight: bold; }
+.month-title { font-size: 30px; font-weight: bold; margin: 0 15px; }
 
 .week-header { flex-direction: row; height: 60px; border-bottom: 1px solid #eee; }
 .weekday { flex: 1; text-align: center; font-size: 24px; color: #666; font-weight: bold; }

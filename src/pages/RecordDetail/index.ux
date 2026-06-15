@@ -1,0 +1,295 @@
+<template>
+  <div class="record-detail">
+    <!-- 头部：返回 + 年月切换 -->
+    <div class="header">
+      <div class="back-btn" @click="goBack"><text>‹ 返回</text></div>
+      <div class="month-nav">
+        <div class="arrow" @click="prevMonth"><text>‹</text></div>
+        <text class="month-title">{{currentYear}}年{{currentMonth}}月</text>
+        <div class="arrow" @click="nextMonth"><text>›</text></div>
+      </div>
+      <div class="header-space"></div>
+    </div>
+
+    <!-- 每日列表 -->
+    <list class="detail-list">
+      <list-item for="{{day in dailyData}}" class="day-block">
+        <div class="day-header">
+          <div class="day-info">
+            <text class="day-date">{{day.dayStr}} {{day.weekDay}}</text>
+          </div>
+          <text class="day-balance">结余: {{day.balanceStr}}</text>
+        </div>
+        <div class="record-row" for="{{record in day.records}}">
+          <div class="record-icon" style="background-color: {{record.type === 'income' ? '#4CAF50' : '#E53935'}};">
+            <text>{{record.type === 'income' ? '收' : '支'}}</text>
+          </div>
+          <div class="record-info">
+            <text class="record-title">{{record.title}}</text>
+          </div>
+          <div class="record-amount">
+            <text class="amount {{record.type === 'income' ? 'income-amount' : 'expense-amount'}}">{{record.type === 'income' ? '+' : '-'}}¥{{record.amountStr}}</text>
+          </div>
+        </div>
+        <div class="no-record" if="{{day.records.length === 0}}">
+          <text>无记录</text>
+        </div>
+      </list-item>
+    </list>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+
+export default {
+  data: {
+    currentYear: new Date().getFullYear(),
+    currentMonth: new Date().getMonth() + 1,
+    dailyData: []
+  },
+  onInit() {
+    this.loadData()
+  },
+  loadData() {
+    storage.get({
+      key: 'events',
+      success: (value) => {
+        let events = []
+        if (value) {
+          try { events = JSON.parse(value) || [] } catch(e) {}
+        }
+        this.buildDailyData(events)
+      },
+      fail: () => {
+        this.buildDailyData([])
+      }
+    })
+  },
+  buildDailyData(events) {
+    const year = this.currentYear
+    const month = this.currentMonth
+    const monthPrefix = `${year}-${month.toString().padStart(2, '0')}`
+    const daysInMonth = new Date(year, month, 0).getDate()
+
+    const weekNames = ['日', '一', '二', '三', '四', '五', '六']
+    const dailyMap = {}
+
+    // 过滤当月且有金额的事件
+    const monthEvents = events.filter(e => {
+      if (!e.date || !e.date.startsWith(monthPrefix)) return false
+      const amount = parseFloat(e.amount)
+      return !isNaN(amount) && amount > 0
+    })
+
+    monthEvents.forEach(e => {
+      const day = parseInt(e.date.split('-')[2])
+      if (!dailyMap[day]) {
+        const dateObj = new Date(year, month - 1, day)
+        const weekDay = weekNames[dateObj.getDay()]
+        dailyMap[day] = {
+          day: day,
+          dayStr: `${month}.${day.toString().padStart(2, '0')}`,
+          weekDay: weekDay,
+          records: [],
+          incomeTotal: 0,
+          expenseTotal: 0
+        }
+      }
+      const amount = parseFloat(e.amount)
+      // 确保 type 字段存在，否则默认为支出
+      const type = e.type === 'income' ? 'income' : 'expense'
+      dailyMap[day].records.push({
+        ...e,
+        amountStr: amount.toFixed(2),
+        type: type
+      })
+      if (type === 'income') {
+        dailyMap[day].incomeTotal += amount
+      } else {
+        dailyMap[day].expenseTotal += amount
+      }
+    })
+
+    // 只保留有记录的日期，并按日期降序排列
+    const dailyArray = []
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (dailyMap[d]) {
+        const day = dailyMap[d]
+        const balance = day.incomeTotal - day.expenseTotal
+        day.balanceStr = balance.toFixed(2)
+        dailyArray.push(day)
+      }
+    }
+    dailyArray.sort((a, b) => b.day - a.day)
+    this.dailyData = dailyArray
+  },
+  prevMonth() {
+    if (this.currentMonth === 1) {
+      this.currentYear -= 1
+      this.currentMonth = 12
+    } else {
+      this.currentMonth -= 1
+    }
+    this.loadData()
+  },
+  nextMonth() {
+    if (this.currentMonth === 12) {
+      this.currentYear += 1
+      this.currentMonth = 1
+    } else {
+      this.currentMonth += 1
+    }
+    this.loadData()
+  },
+  goBack() {
+    router.back()
+  }
+}
+</script>
+
+<style>
+.record-detail {
+  flex: 1;
+  flex-direction: column;
+  background-color: #f5f5f5;
+}
+
+.header {
+  height: 80px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 15px;
+}
+.back-btn {
+  width: 130px;
+  height: 60px;
+  justify-content: center;
+  align-items: center;
+}
+.back-btn text {
+  font-size: 28px;
+  color: #0f8de8;
+  font-weight: bold;
+}
+.month-nav {
+  flex-direction: row;
+  align-items: center;
+}
+.arrow {
+  width: 50px;
+  height: 60px;
+  justify-content: center;
+  align-items: center;
+}
+.arrow text {
+  font-size: 40px;
+  color: #0f8de8;
+}
+.month-title {
+  font-size: 30px;
+  font-weight: bold;
+  margin: 0 15px;
+}
+.header-space {
+  width: 130px;
+}
+
+.detail-list {
+  flex: 1;
+  flex-direction: column;
+  padding: 10px;
+}
+
+.day-block {
+  flex-direction: column;
+  background-color: #ffffff;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  padding: 15px;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+}
+
+.day-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
+}
+
+.day-info {
+  flex-direction: column;
+}
+.day-date {
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
+}
+
+.day-balance {
+  font-size: 26px;
+  color: #666;
+  font-weight: bold;
+}
+
+.record-row {
+  flex-direction: row;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.record-row:last-child {
+  border-bottom: none;
+}
+
+.record-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 30px;
+  justify-content: center;
+  align-items: center;
+  margin-right: 15px;
+}
+.record-icon text {
+  font-size: 28px;
+  color: white;
+  font-weight: bold;
+}
+
+.record-info {
+  flex: 1;
+}
+.record-title {
+  font-size: 28px;
+  color: #333;
+}
+
+.record-amount {
+  align-items: flex-end;
+}
+.amount {
+  font-size: 30px;
+  font-weight: bold;
+}
+.expense-amount {
+  color: #E53935;
+}
+.income-amount {
+  color: #4CAF50;
+}
+
+.no-record {
+  padding: 10px 0;
+  align-items: center;
+}
+.no-record text {
+  font-size: 24px;
+  color: #ccc;
+}
+</style>
