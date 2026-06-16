@@ -10,7 +10,7 @@
       <div class="avatar">
         <text class="avatar-icon">👤</text>
       </div>
-      <text class="nickname">快应用用户</text>
+      <text class="nickname">某用户</text>
       <text class="user-id">ID: 20250001</text>
     </div>
 
@@ -146,7 +146,7 @@ export default {
   showAbout() {
     prompt.showDialog({
       title: '关于应用',
-      message: '智能日程表 v1.0.0\n集日程管理、记账、AI助手于一体的小程序。',
+      message: '我在 v1.6\n集日程管理、记账、AI助手于一体的小程序。',
       buttons: [{ text: '知道了' }]
     })
   }
