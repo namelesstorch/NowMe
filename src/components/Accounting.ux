@@ -3,6 +3,7 @@
     <!-- 明细视图 -->
     <div class="detail-view" if="{{currentTab === 'detail'}}">
       <div class="header">
+        <div class="icon-btn" @click="switchToListView"><text>📋</text></div>
         <div class="arrow" @click="prevMonth"><text>‹</text></div>
         <text class="month-title">{{currentYear}}年{{currentMonth}}月</text>
         <div class="arrow" @click="nextMonth"><text>›</text></div>
@@ -30,98 +31,100 @@
       </div>
     </div>
 
-    <!-- 统计视图 -->
+    <!-- 统计视图（可滑动） -->
     <div class="stat-view" if="{{currentTab === 'stat'}}">
-      <div class="stat-header">
-        <div class="icon-btn" @click="prevStatMonth"><text>‹</text></div>
-        <text class="stat-month-title">{{statYear}}年{{statMonth}}月账目统计</text>
-        <div class="icon-btn" @click="nextStatMonth"><text>›</text></div>
-      </div>
+      <scroll scroll-y="true" class="stat-scroll">
+        <div class="scroll-content">
+          <div class="stat-header">
+            <div class="arrow" @click="prevStatMonth"><text>‹</text></div>
+            <text class="stat-month-title">{{statYear}}年{{statMonth}}月账目统计</text>
+            <div class="arrow" @click="nextStatMonth"><text>›</text></div>
+          </div>
 
-      <div class="stat-content">
-        <!-- 收支概览卡片 -->
-        <div class="stat-card">
-          <div class="card-top-row">
-            <div class="balance-block">
-              <text class="balance-label">本月结余</text>
-              <text class="balance-amount">{{statSummary.balanceStr}}</text>
-            </div>
-            <div class="prev-balance-block">
-              <text class="prev-label">上月结余：</text>
-              <text class="prev-amount">{{statSummary.prevBalanceStr}}</text>
-            </div>
-          </div>
-          <div class="progress-bars">
-            <div class="progress-row">
-              <text class="progress-label">支出</text>
-              <div class="progress-bar" style="width: {{statSummary.expenseBarWidth}}px; background-color: #FFC107;"></div>
-              <text class="progress-value">¥{{statSummary.monthExpenseStr}}</text>
-            </div>
-            <div class="progress-row">
-              <text class="progress-label">收入</text>
-              <div class="progress-bar" style="width: {{statSummary.incomeBarWidth}}px; background-color: #EF5350;"></div>
-              <text class="progress-value">¥{{statSummary.monthIncomeStr}}</text>
-            </div>
-          </div>
-        </div>
-
-        <!-- 支出趋势卡片 -->
-        <div class="stat-card">
-          <text class="card-title">支出趋势概况</text>
-          <div class="trend-block">
-            <text class="trend-label">本月单日最高支出</text>
-            <text class="trend-highlight">{{statSummary.maxExpenseDate}} 支出 ¥{{statSummary.maxExpenseStr}}</text>
-          </div>
-          <div class="trend-stats">
-            <div class="trend-stat-item">
-              <text class="stat-label">本月每日平均支出</text>
-              <text class="stat-value">{{statSummary.avgExpenseStr}}</text>
-            </div>
-            <div class="trend-stat-item">
-              <text class="stat-label">本月支出总笔数</text>
-              <text class="stat-value">{{statSummary.expenseCount}}</text>
-            </div>
-          </div>
-          <scroll scroll-x="true" class="chart-scroll">
-            <div class="chart-container">
-              <div class="chart-bar-wrapper" for="{{item in statSummary.expenseBars}}">
-                <div class="chart-bar" style="height: {{item.height}}px;"></div>
-                <text class="bar-date" if="{{item.showDate}}">{{item.day}}</text>
+          <!-- 收支概览卡片 -->
+          <div class="stat-card">
+            <div class="card-top-row">
+              <div class="balance-block">
+                <text class="balance-label">本月结余</text>
+                <text class="balance-amount">{{statSummary.balanceStr}}</text>
+              </div>
+              <div class="prev-balance-block">
+                <text class="prev-label">上月结余：</text>
+                <text class="prev-amount">{{statSummary.prevBalanceStr}}</text>
               </div>
             </div>
-          </scroll>
-        </div>
-
-        <!-- 收入趋势卡片 -->
-        <div class="stat-card">
-          <text class="card-title">收入趋势概况</text>
-          <div class="trend-block">
-            <text class="trend-label">本月单日最高收入</text>
-            <text class="trend-highlight">{{statSummary.maxIncomeDate}} 收入 ¥{{statSummary.maxIncomeStr}}</text>
-          </div>
-          <div class="trend-stats">
-            <div class="trend-stat-item">
-              <text class="stat-label">本月每日平均收入</text>
-              <text class="stat-value">{{statSummary.avgIncomeStr}}</text>
-            </div>
-            <div class="trend-stat-item">
-              <text class="stat-label">本月收入总笔数</text>
-              <text class="stat-value">{{statSummary.incomeCount}}</text>
-            </div>
-          </div>
-          <scroll scroll-x="true" class="chart-scroll">
-            <div class="chart-container">
-              <div class="chart-bar-wrapper" for="{{item in statSummary.incomeBars}}">
-                <div class="chart-bar income-chart-bar" style="height: {{item.height}}px;"></div>
-                <text class="bar-date" if="{{item.showDate}}">{{item.day}}</text>
+            <div class="progress-bars">
+              <div class="progress-row">
+                <text class="progress-label">支出</text>
+                <div class="progress-bar" style="width: {{statSummary.expenseBarWidth}}px; background-color: #FFC107;"></div>
+                <text class="progress-value">¥{{statSummary.monthExpenseStr}}</text>
+              </div>
+              <div class="progress-row">
+                <text class="progress-label">收入</text>
+                <div class="progress-bar" style="width: {{statSummary.incomeBarWidth}}px; background-color: #EF5350;"></div>
+                <text class="progress-value">¥{{statSummary.monthIncomeStr}}</text>
               </div>
             </div>
-          </scroll>
+          </div>
+
+          <!-- 支出趋势卡片 -->
+          <div class="stat-card">
+            <text class="card-title">支出趋势概况</text>
+            <div class="trend-block">
+              <text class="trend-label">本月单日最高支出</text>
+              <text class="trend-highlight">{{statSummary.maxExpenseDate}} 支出 ¥{{statSummary.maxExpenseStr}}</text>
+            </div>
+            <div class="trend-stats">
+              <div class="trend-stat-item">
+                <text class="stat-label">本月每日平均支出</text>
+                <text class="stat-value">{{statSummary.avgExpenseStr}}</text>
+              </div>
+              <div class="trend-stat-item">
+                <text class="stat-label">本月支出总笔数</text>
+                <text class="stat-value">{{statSummary.expenseCount}}</text>
+              </div>
+            </div>
+            <scroll scroll-x="true" class="chart-scroll">
+              <div class="chart-container">
+                <div class="chart-bar-wrapper" for="{{item in statSummary.expenseBars}}">
+                  <div class="chart-bar" style="height: {{item.height}}px;"></div>
+                  <text class="bar-date" if="{{item.showDate}}">{{item.day}}</text>
+                </div>
+              </div>
+            </scroll>
+          </div>
+
+          <!-- 收入趋势卡片 -->
+          <div class="stat-card">
+            <text class="card-title">收入趋势概况</text>
+            <div class="trend-block">
+              <text class="trend-label">本月单日最高收入</text>
+              <text class="trend-highlight">{{statSummary.maxIncomeDate}} 收入 ¥{{statSummary.maxIncomeStr}}</text>
+            </div>
+            <div class="trend-stats">
+              <div class="trend-stat-item">
+                <text class="stat-label">本月每日平均收入</text>
+                <text class="stat-value">{{statSummary.avgIncomeStr}}</text>
+              </div>
+              <div class="trend-stat-item">
+                <text class="stat-label">本月收入总笔数</text>
+                <text class="stat-value">{{statSummary.incomeCount}}</text>
+              </div>
+            </div>
+            <scroll scroll-x="true" class="chart-scroll">
+              <div class="chart-container">
+                <div class="chart-bar-wrapper" for="{{item in statSummary.incomeBars}}">
+                  <div class="chart-bar income-chart-bar" style="height: {{item.height}}px;"></div>
+                  <text class="bar-date" if="{{item.showDate}}">{{item.day}}</text>
+                </div>
+              </div>
+            </scroll>
+          </div>
         </div>
-      </div>
+      </scroll>
     </div>
 
-    <!-- 底部导航栏 -->
+    <!-- 底部导航栏（固定在底部） -->
     <div class="bottom-bar">
       <div class="tab-item" @click="switchToDetail">
         <text class="tab-text" style="color: {{currentTab === 'detail' ? '#0f8de8' : '#999'}}; font-weight: {{currentTab === 'detail' ? 'bold' : 'normal'}};">明细</text>
@@ -172,20 +175,14 @@ export default {
     },
     currentTab: 'detail'
   },
-  onInit() {
-    this.loadEvents()
-  },
-  onShow() {
-    this.loadEvents()
-  },
+  onInit() { this.loadEvents() },
+  onShow() { this.loadEvents() },
   loadEvents() {
     storage.get({
       key: 'events',
       success: (value) => {
         let events = []
-        if (value) {
-          try { events = JSON.parse(value) || [] } catch(e) {}
-        }
+        if (value) { try { events = JSON.parse(value) || [] } catch(e) {} }
         this.events = events
         this.buildCalendar()
         if (this.currentTab === 'stat') this.buildStat()
@@ -222,7 +219,11 @@ export default {
         const dayExpense = this.events.filter(e => e.date === dateStr && e.type !== 'income').reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
         totalIncome += dayIncome
         totalExpense += dayExpense
-        cells.push({ day: d, isCurrentMonth: true, income: dayIncome, expense: dayExpense, incomeStr: dayIncome.toFixed(2), expenseStr: dayExpense.toFixed(2), cellClass: (dayIncome > 0 || dayExpense > 0) ? 'active-cell' : 'inactive-cell' })
+        cells.push({
+          day: d, isCurrentMonth: true, income: dayIncome, expense: dayExpense,
+          incomeStr: dayIncome.toFixed(2), expenseStr: dayExpense.toFixed(2),
+          cellClass: (dayIncome > 0 || dayExpense > 0) ? 'active-cell' : 'inactive-cell'
+        })
       }
       for (let d = 1; d <= nextDays; d++) {
         cells.push({ day: d, isCurrentMonth: false, income: 0, expense: 0 })
@@ -258,8 +259,7 @@ export default {
       const prevMonthPrefix = `${prevMonthYear}-${prevMonth.toString().padStart(2, '0')}`
 
       let monthIncome = 0, monthExpense = 0, expenseCount = 0, incomeCount = 0
-      const dailyExpense = {}
-      const dailyIncome = {}
+      const dailyExpense = {}, dailyIncome = {}
       let prevIncome = 0, prevExpense = 0
 
       this.events.forEach(e => {
@@ -267,13 +267,11 @@ export default {
         const amount = parseFloat(e.amount) || 0
         if (e.date.startsWith(monthPrefix)) {
           if (e.type === 'income') {
-            monthIncome += amount
-            incomeCount++
+            monthIncome += amount; incomeCount++
             const day = parseInt(e.date.split('-')[2])
             dailyIncome[day] = (dailyIncome[day] || 0) + amount
           } else {
-            monthExpense += amount
-            expenseCount++
+            monthExpense += amount; expenseCount++
             const day = parseInt(e.date.split('-')[2])
             dailyExpense[day] = (dailyExpense[day] || 0) + amount
           }
@@ -285,7 +283,6 @@ export default {
 
       const prevBalance = prevIncome - prevExpense
       const balance = monthIncome - monthExpense
-
       const daysInMonth = new Date(year, month, 0).getDate()
 
       const expenseBars = []
@@ -293,62 +290,46 @@ export default {
       for (let d = 1; d <= daysInMonth; d++) {
         const amount = dailyExpense[d] || 0
         if (amount > maxExpense) { maxExpense = amount; maxExpenseDate = `${month}月${d}日` }
-        expenseBars.push({ day: d, amount: amount, showDate: [1,5,10,15,20,25,30].includes(d) })
+        expenseBars.push({ day: d, amount, showDate: [1,5,10,15,20,25,30].includes(d) })
       }
-      const maxBarHeight = 80
-      const maxForExpense = maxExpense || 1
-      expenseBars.forEach(bar => { bar.height = Math.round((bar.amount / maxForExpense) * maxBarHeight) })
+      expenseBars.forEach(bar => { bar.height = Math.round((bar.amount / (maxExpense || 1)) * 80) })
 
       const incomeBars = []
       let maxIncome = 0, maxIncomeDate = ''
       for (let d = 1; d <= daysInMonth; d++) {
         const amount = dailyIncome[d] || 0
         if (amount > maxIncome) { maxIncome = amount; maxIncomeDate = `${month}月${d}日` }
-        incomeBars.push({ day: d, amount: amount, showDate: [1,5,10,15,20,25,30].includes(d) })
+        incomeBars.push({ day: d, amount, showDate: [1,5,10,15,20,25,30].includes(d) })
       }
-      const maxForIncome = maxIncome || 1
-      incomeBars.forEach(bar => { bar.height = Math.round((bar.amount / maxForIncome) * maxBarHeight) })
+      incomeBars.forEach(bar => { bar.height = Math.round((bar.amount / (maxIncome || 1)) * 80) })
 
       const avgExpense = daysInMonth > 0 ? (monthExpense / daysInMonth) : 0
       const avgIncome = daysInMonth > 0 ? (monthIncome / daysInMonth) : 0
 
       const maxAmount = Math.max(monthExpense, monthIncome, 1)
-      const maxBarPx = 200
-      const expenseBarWidth = Math.round((monthExpense / maxAmount) * maxBarPx)
-      const incomeBarWidth = Math.round((monthIncome / maxAmount) * maxBarPx)
+      const expenseBarWidth = Math.round((monthExpense / maxAmount) * 200)
+      const incomeBarWidth = Math.round((monthIncome / maxAmount) * 200)
 
       this.statSummary = {
         balanceStr: balance.toFixed(2),
         prevBalanceStr: prevBalance.toFixed(2),
         monthExpenseStr: monthExpense.toFixed(2),
         monthIncomeStr: monthIncome.toFixed(2),
-        expenseBarWidth: expenseBarWidth,
-        incomeBarWidth: incomeBarWidth,
-        maxExpenseDate: maxExpenseDate,
-        maxExpenseStr: maxExpense.toFixed(2),
+        expenseBarWidth, incomeBarWidth,
+        maxExpenseDate, maxExpenseStr: maxExpense.toFixed(2),
         avgExpenseStr: avgExpense.toFixed(2),
-        expenseCount: expenseCount,
-        maxIncomeDate: maxIncomeDate,
-        maxIncomeStr: maxIncome.toFixed(2),
+        expenseCount,
+        maxIncomeDate, maxIncomeStr: maxIncome.toFixed(2),
         avgIncomeStr: avgIncome.toFixed(2),
-        incomeCount: incomeCount,
-        expenseBars: expenseBars,
-        incomeBars: incomeBars
+        incomeCount,
+        expenseBars, incomeBars
       }
     } catch(e) {}
   },
-
-  switchToDetail() {
-    this.currentTab = 'detail'
-  },
-  switchToStat() {
-    this.currentTab = 'stat'
-    this.buildStat()
-  },
-
-  addRecord() {
-    router.push({ uri: 'pages/AddRecord' })
-  }
+  switchToDetail() { this.currentTab = 'detail' },
+  switchToStat() { this.currentTab = 'stat'; this.buildStat() },
+  addRecord() { router.push({ uri: 'pages/AddRecord' }) },
+  switchToListView() { router.push({ uri: 'pages/RecordDetail' }) }
 }
 </script>
 
@@ -357,10 +338,12 @@ export default {
 
 /* 明细视图 */
 .detail-view { flex: 1; flex-direction: column; }
-.header { height: 80px; flex-direction: row; align-items: center; justify-content: center; border-bottom: 1px solid #eee; }
-.arrow { padding: 20px; }
+.header { height: 80px; flex-direction: row; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eee; padding: 0 10px; }
+.icon-btn { width: 60px; height: 60px; justify-content: center; align-items: center; margin-right: 5px; }
+.icon-btn text { font-size: 36px; }
+.arrow { padding: 10px; }
 .arrow text { font-size: 40px; color: #0f8de8; }
-.month-title { font-size: 30px; font-weight: bold; }
+.month-title { font-size: 30px; font-weight: bold; margin: 0 15px; }
 
 .week-header { flex-direction: row; height: 60px; border-bottom: 1px solid #eee; }
 .weekday { flex: 1; text-align: center; font-size: 24px; color: #666; font-weight: bold; }
@@ -378,14 +361,14 @@ export default {
 .summary-label { font-size: 24px; color: #333; font-weight: bold; }
 
 /* 统计视图 */
-.stat-view { flex: 1; flex-direction: column; background-color: #f5f5f5; }
-.stat-content { flex: 1; flex-direction: column; padding: 10px; }
+.stat-view { flex: 1; flex-direction: column; }
+.stat-scroll { flex: 1; }
+.scroll-content { flex-direction: column; width: 100%; }
+
 .stat-header { height: 70px; flex-direction: row; align-items: center; justify-content: space-between; background-color: #fff; border-bottom: 1px solid #e0e0e0; padding: 0 20px; margin-bottom: 10px; }
-.icon-btn { width: 60px; height: 60px; justify-content: center; align-items: center; }
-.icon-btn text { font-size: 40px; color: #0f8de8; }
 .stat-month-title { font-size: 30px; font-weight: bold; color: #333; }
 
-.stat-card { flex-direction: column; background-color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0px 2px 6px rgba(0,0,0,0.1); }
+.stat-card { flex-direction: column; background-color: #fff; border-radius: 12px; padding: 20px; margin: 10px; box-shadow: 0px 2px 6px rgba(0,0,0,0.1); }
 
 .card-top-row { flex-direction: row; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
 .balance-block { flex-direction: column; }

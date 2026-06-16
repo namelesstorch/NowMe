@@ -9,20 +9,25 @@
       <calendar if="{{currentIndex === 0}}"></calendar>
       <accounting if="{{currentIndex === 1}}"></accounting>
       <ai-assistant if="{{currentIndex === 2}}" events="{{events}}" onadd-event="addEvent"></ai-assistant>
-      <!-- 个人页面留在主界面内，用组件方式引入更简单，但也可以通过底部切换 -->
-      <div class="profile-placeholder" if="{{currentIndex === 3}}">
-        <text class="profile-tip">个人中心开发中</text>
-      </div>
     </div>
 
     <!-- 底部导航栏 -->
     <div class="bottom-bar">
-      <div 
-        class="tab-item {{currentIndex === idx ? 'tab-active' : ''}}" 
-        for="{{(idx, item) in tabList}}" 
-        @click="switchTab(idx)">
-        <text class="tab-icon">{{item.icon}}</text>
-        <text class="tab-text">{{item.name}}</text>
+      <div class="tab-item" @click="switchToSchedule">
+        <text class="tab-icon">📅</text>
+        <text class="tab-text" style="color: {{currentIndex === 0 ? '#0f8de8' : '#999'}}; font-weight: {{currentIndex === 0 ? 'bold' : 'normal'}};">日程</text>
+      </div>
+      <div class="tab-item" @click="switchToAccount">
+        <text class="tab-icon">💰</text>
+        <text class="tab-text" style="color: {{currentIndex === 1 ? '#0f8de8' : '#999'}}; font-weight: {{currentIndex === 1 ? 'bold' : 'normal'}};">记账</text>
+      </div>
+      <div class="tab-item" @click="switchToAi">
+        <text class="tab-icon">🤖</text>
+        <text class="tab-text" style="color: {{currentIndex === 2 ? '#0f8de8' : '#999'}}; font-weight: {{currentIndex === 2 ? 'bold' : 'normal'}};">AI助手</text>
+      </div>
+      <div class="tab-item" @click="switchToProfile">
+        <text class="tab-icon">👤</text>
+        <text class="tab-text" style="color: {{currentIndex === 3 ? '#0f8de8' : '#999'}}; font-weight: {{currentIndex === 3 ? 'bold' : 'normal'}};">我的</text>
       </div>
     </div>
   </div>
@@ -35,19 +40,19 @@ import router from '@system.router'
 export default {
   data: {
     currentIndex: 0,
-    tabList: [
-      { name: '日程', icon: '📅' },
-      { name: '记账', icon: '💰' },
-      { name: 'AI助手', icon: '🤖' },
-      { name: '我的', icon: '👤' }
-    ],
-    events: []
+    events: [],
+    comingFromProfile: false
   },
   onInit() {
     this.loadEvents()
   },
   onShow() {
     this.loadEvents()
+    // 从“我的”页面返回后，强制回到日程界面并高亮
+    if (this.comingFromProfile) {
+      this.currentIndex = 0
+      this.comingFromProfile = false
+    }
   },
   loadEvents() {
     storage.get({
@@ -63,9 +68,7 @@ export default {
           this.events = []
         }
       },
-      fail: () => {
-        this.events = []
-      }
+      fail: () => { this.events = [] }
     })
   },
   addEvent(evt) {
@@ -89,12 +92,20 @@ export default {
     const colors = ['#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0']
     return colors[Math.floor(Math.random() * colors.length)]
   },
-  switchTab(idx) {
-    this.currentIndex = idx
-    // 点击“我的”时跳转到个人页面
-    if (idx === 3) {
-      router.push({ uri: 'pages/Profile' })
-    }
+
+  // ===== 独立的切换方法 =====
+  switchToSchedule() {
+    this.currentIndex = 0
+  },
+  switchToAccount() {
+    this.currentIndex = 1
+  },
+  switchToAi() {
+    this.currentIndex = 2
+  },
+  switchToProfile() {
+    this.comingFromProfile = true
+    router.push({ uri: 'pages/Profile' })
   }
 }
 </script>
@@ -105,21 +116,9 @@ export default {
   flex-direction: column;
   background-color: #f5f5f5;
 }
-
 .content {
   flex: 1;
 }
-
-.profile-placeholder {
-  flex: 1;
-  justify-content: center;
-  align-items: center;
-}
-.profile-tip {
-  font-size: 30px;
-  color: #999;
-}
-
 .bottom-bar {
   height: 110px;
   flex-direction: row;
@@ -129,7 +128,6 @@ export default {
   border-top: 1px solid #e0e0e0;
   padding-bottom: 10px;
 }
-
 .tab-item {
   flex: 1;
   flex-direction: column;
@@ -137,19 +135,11 @@ export default {
   justify-content: center;
   padding: 10px 0;
 }
-
 .tab-icon {
   font-size: 36px;
   margin-bottom: 4px;
 }
-
 .tab-text {
   font-size: 22px;
-  color: #999;
-}
-
-.tab-active .tab-text {
-  color: #0f8de8;
-  font-weight: bold;
 }
 </style>

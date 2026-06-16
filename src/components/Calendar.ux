@@ -1,6 +1,5 @@
 <template>
   <div class="calendar">
-    <!-- 头部：功能按钮 + 周切换 -->
     <div class="header">
       <div class="left-section">
         <div class="icon-btn" @click="addEvent"><text>➕</text></div>
@@ -13,7 +12,6 @@
       </div>
     </div>
 
-    <!-- 表头：星期与日期 -->
     <div class="row header-row">
       <div class="time-label"><text>时间</text></div>
       <div 
@@ -25,7 +23,6 @@
       </div>
     </div>
 
-    <!-- 可滚动的时间列表 -->
     <list id="timeList" class="time-list">
       <list-item for="{{hour in hours}}" class="row">
         <div class="time-label"><text>{{hour.label}}</text></div>
@@ -53,7 +50,6 @@ import router from '@system.router'
 import storage from '@system.storage'
 
 export default {
-  // 不再依赖 props，内部自行维护事件列表
   props: [],
   data: {
     currentWeekStart: '',
@@ -61,17 +57,31 @@ export default {
     weekRangeText: '',
     hours: [],
     expandedCol: -1,
-    // 内部事件数组
-    events: []
+    events: [],
+    defaultStartHour: 7,
+    _scrollTimer: null
   },
   onInit() {
-    this.loadEvents()
+    this.loadStartHourConfig()
     this.buildHours()
     this.computeCurrentWeek()
+    this.loadEvents()
   },
   onShow() {
-    // 每次页面显示时重新加载数据，确保从编辑页返回后刷新
     this.loadEvents()
+  },
+  loadStartHourConfig() {
+    storage.get({
+      key: 'startHour',
+      success: (value) => {
+        if (value !== null && value !== undefined) {
+          const hour = parseInt(value, 10)
+          if (!isNaN(hour) && hour >= 0 && hour <= 23) {
+            this.defaultStartHour = hour
+          }
+        }
+      }
+    })
   },
   loadEvents() {
     storage.get({
@@ -86,14 +96,38 @@ export default {
         } else {
           this.events = []
         }
+        this.scheduleScroll()
       },
       fail: () => {
         this.events = []
+        this.scheduleScroll()
       }
     })
   },
-  onReady() {
-    this.$element('timeList').scrollTo({ index: 6, animated: false })
+  scheduleScroll() {
+    if (this._scrollTimer) clearTimeout(this._scrollTimer)
+    this._scrollTimer = setTimeout(() => {
+      const target = this.getFirstEventHour()
+      try {
+        const list = this.$element('timeList')
+        if (list && list.scrollTo) {
+          list.scrollTo({ index: target, animated: false })
+        }
+      } catch(e) {}
+      this._scrollTimer = null
+    }, 300)
+  },
+  getFirstEventHour() {
+    if (!this.weekDays.length || !this.events.length) return this.defaultStartHour
+    const weekDates = this.weekDays.map(d => d.fullDate)
+    let minHour = 24
+    this.events.forEach(e => {
+      if (weekDates.includes(e.date)) {
+        const sh = e.startHour || 0
+        if (sh < minHour) minHour = sh
+      }
+    })
+    return minHour < 24 ? minHour : this.defaultStartHour
   },
   buildHours() {
     this.hours = Array.from({length: 24}, (_, i) => ({
@@ -138,12 +172,14 @@ export default {
     start.setDate(start.getDate() - 7)
     this.currentWeekStart = this.formatDate(start)
     this.buildWeekDays()
+    this.scheduleScroll()
   },
   nextWeek() {
     const start = new Date(this.currentWeekStart)
     start.setDate(start.getDate() + 7)
     this.currentWeekStart = this.formatDate(start)
     this.buildWeekDays()
+    this.scheduleScroll()
   },
   expandCol(index) {
     this.expandedCol = this.expandedCol === index ? -1 : index
@@ -219,84 +255,42 @@ export default {
 </script>
 
 <style>
-/* 样式保持不变，此处省略，请直接复制原 Calendar.ux 的 style 部分 */
-.calendar {
-  flex: 1;
-  flex-direction: column;
-  background-color: #fff;
-}
+.calendar { flex: 1; flex-direction: column; background-color: #fff; }
+.header { height: 80px; flex-direction: row; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 0 10px; }
+.left-section, .right-section { flex-direction: row; align-items: center; }
+.icon-btn { width: 60px; height: 60px; justify-content: center; align-items: center; margin: 0 5px; }
+.icon-btn text { font-size: 32px; }
+.arrow { padding: 10px; }
+.arrow text { font-size: 40px; color: #0f8de8; }
+.week-title { font-size: 30px; font-weight: bold; }
 
-.header {
-  height: 80px;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid #ddd;
-  padding: 0 10px;
-}
-
-.left-section, .right-section {
-  flex-direction: row;
-  align-items: center;
-}
-
-.icon-btn {
-  width: 60px;
-  height: 60px;
-  justify-content: center;
-  align-items: center;
-  margin: 0 5px;
-}
-
-.icon-btn text {
-  font-size: 32px;
-}
-
-.arrow {
-  padding: 10px;
-}
-
-.arrow text {
-  font-size: 40px;
-  color: #0f8de8;
-}
-
-.week-title {
-  font-size: 30px;
-  font-weight: bold;
-}
-
-.header-row {
-  height: 80px;
-  background-color: #fafafa;
-}
+.header-row { height: 80px; background-color: #fafafa; }
 
 .row {
   flex-direction: row;
-  height: 60px;
+  min-height: 80px;
   border-bottom: 1px solid #eee;
 }
 
 .time-label {
   width: 100px;
+  min-height: 80px;
   align-items: center;
   justify-content: center;
   border-right: 1px solid #eee;
   background-color: #f9f9f9;
 }
-
 .time-label text { font-size: 22px; color: #333; }
 
 .day-col {
   flex: 1;
+  min-height: 80px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   border-right: 1px solid #eee;
   padding: 2px;
-  height: 60px;
 }
-
 .day-col-expanded { flex: 2; }
 
 .day-name { font-size: 24px; font-weight: bold; }
@@ -304,21 +298,19 @@ export default {
 
 .cell {
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
+  padding: 6px 2px;
 }
 
 .event-item {
-  margin: 1px 2px;
-  padding: 4px 6px;
+  margin: 2px 2px;
+  padding: 2px 4px;
   border-radius: 4px;
   flex-direction: column;
 }
 
-.event-title { font-size: 22px; color: white; }
-.event-location, .event-amount { font-size: 18px; color: white; }
+.event-title { font-size: 20px; color: white; line-height: 22px; }
+.event-location, .event-amount { font-size: 16px; color: white; line-height: 18px; }
 
-.time-list {
-  flex: 1;
-  flex-direction: column;
-}
+.time-list { flex: 1; flex-direction: column; }
 </style>
