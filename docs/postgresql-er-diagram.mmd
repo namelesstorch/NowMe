@@ -1,6 +1,8 @@
 erDiagram
     USERS ||--|| USER_PREFERENCES : has
     USERS ||--|| USER_FINANCIAL_PROFILES : has
+    USERS ||--o{ AUTH_VERIFICATION_CODES : verifies
+    USERS ||--o{ USER_SESSIONS : authenticates
     USERS ||--o{ NOTIFICATION_SETTINGS : configures
     USERS ||--o{ FINANCIAL_GOALS : sets
     USERS ||--o{ CATEGORIES : owns
@@ -11,45 +13,79 @@ erDiagram
     USERS ||--o{ SPENDING_SUMMARIES : caches
     USERS ||--o{ AI_INPUTS : submits
     USERS ||--o{ AI_INSIGHTS : receives
+    USERS ||--o{ CONTEXT_SNAPSHOTS : owns
+    USERS ||--o{ USER_HABIT_SIGNALS : learns
+    USERS ||--o{ AI_CONTEXT_PACKAGES : sends
+    USERS ||--o{ AI_RECOMMENDATION_FEEDBACK : responds
 
     CATEGORIES ||--o{ CATEGORIES : parent
     CATEGORIES ||--o{ TRANSACTIONS : classifies
     CATEGORIES ||--o{ BUDGETS : limits
 
+    TAGS ||--o{ EVENT_TAGS : applies_to
+    TAGS ||--o{ TRANSACTION_TAGS : applies_to
+
     EVENTS ||--o{ EVENT_REMINDERS : has
     EVENTS ||--o{ EVENT_TAGS : tagged_by
     EVENTS ||--o{ TRANSACTIONS : relates_to
+    EVENTS ||--o{ CONTEXT_SNAPSHOTS : described_by
 
     TRANSACTIONS ||--o{ TRANSACTION_TAGS : tagged_by
-    TAGS ||--o{ EVENT_TAGS : applies_to
-    TAGS ||--o{ TRANSACTION_TAGS : applies_to
+    TRANSACTIONS ||--o{ CONTEXT_SNAPSHOTS : described_by
 
     AI_INPUTS ||--o{ AI_EXTRACTIONS : produces
     AI_INPUTS ||--o{ EVENTS : creates
     AI_INPUTS ||--o{ TRANSACTIONS : creates
     AI_INPUTS ||--o{ AI_CONTEXT_PACKAGES : packaged_for
     AI_INSIGHTS ||--o{ AI_RECOMMENDATION_FEEDBACK : receives
-    EVENTS ||--o{ CONTEXT_SNAPSHOTS : described_by
-    TRANSACTIONS ||--o{ CONTEXT_SNAPSHOTS : described_by
-    USERS ||--o{ CONTEXT_SNAPSHOTS : owns
-    USERS ||--o{ USER_HABIT_SIGNALS : learns
-    USERS ||--o{ AI_CONTEXT_PACKAGES : sends
 
     USERS {
         uuid id PK
         varchar username
         varchar phone UK
-        varchar email UK
+        citext email UK
         text avatar_url
+        timestamptz last_login_at
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    AUTH_VERIFICATION_CODES {
+        uuid id PK
+        uuid user_id FK
+        varchar phone
+        enum purpose
+        enum channel
+        text code_hash
+        inet request_ip
+        varchar device_id
+        timestamptz expires_at
+        timestamptz consumed_at
+        smallint attempt_count
+        enum status
+        timestamptz created_at
+    }
+
+    USER_SESSIONS {
+        uuid id PK
+        uuid user_id FK
+        text session_token_hash
+        varchar device_id
+        varchar device_name
+        varchar client_platform
+        varchar app_version
+        inet login_ip
+        timestamptz last_seen_at
+        timestamptz expires_at
+        timestamptz revoked_at
+        timestamptz created_at
     }
 
     USER_PREFERENCES {
         uuid user_id PK,FK
         varchar currency
         varchar timezone
-        varchar default_view
+        enum default_view
         jsonb reminder_setting
         timestamptz created_at
         timestamptz updated_at
@@ -67,7 +103,7 @@ erDiagram
     NOTIFICATION_SETTINGS {
         uuid id PK
         uuid user_id FK
-        varchar channel
+        enum channel
         time quiet_start
         time quiet_end
         boolean enabled
@@ -83,20 +119,23 @@ erDiagram
         numeric current_amount
         date start_date
         date end_date
-        varchar status
+        enum status
         timestamptz created_at
         timestamptz updated_at
+        timestamptz deleted_at
     }
 
     CATEGORIES {
         uuid id PK
         uuid user_id FK
         varchar name
-        varchar type
+        enum type
         uuid parent_id FK
         varchar icon
         varchar color
         timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
     }
 
     TAGS {
@@ -105,6 +144,8 @@ erDiagram
         varchar name
         varchar color
         timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
     }
 
     EVENTS {
@@ -119,9 +160,9 @@ erDiagram
         timestamptz end_at
         varchar timezone
         varchar location
-        varchar event_type
-        varchar priority
-        varchar status
+        enum event_type
+        enum priority
+        enum status
         varchar color
         boolean is_recurring
         jsonb recurrence_rule
@@ -136,7 +177,7 @@ erDiagram
         uuid user_id FK
         uuid event_id FK
         timestamptz remind_at
-        varchar method
+        enum method
         boolean is_sent
         timestamptz created_at
     }
@@ -153,7 +194,7 @@ erDiagram
         uuid user_id FK
         uuid event_id FK
         uuid category_id FK
-        varchar type
+        enum type
         numeric amount
         varchar currency
         text description
@@ -178,19 +219,20 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid category_id FK
-        varchar period
+        enum period
         date start_date
         date end_date
         numeric limit_amount
         numeric alert_threshold
         timestamptz created_at
         timestamptz updated_at
+        timestamptz deleted_at
     }
 
     SPENDING_SUMMARIES {
         uuid id PK
         uuid user_id FK
-        varchar period_type
+        enum period_type
         date period_start
         date period_end
         numeric total_income
@@ -204,7 +246,7 @@ erDiagram
     AI_INPUTS {
         uuid id PK
         uuid user_id FK
-        varchar input_type
+        enum input_type
         text content
         text raw_text
         text image_url
@@ -215,7 +257,7 @@ erDiagram
     AI_EXTRACTIONS {
         uuid id PK
         uuid input_id FK
-        varchar entity_type
+        enum entity_type
         jsonb parsed_data
         numeric confidence
         timestamptz created_at
@@ -224,18 +266,19 @@ erDiagram
     AI_INSIGHTS {
         uuid id PK
         uuid user_id FK
-        varchar insight_type
+        enum insight_type
         varchar title
         text content
         jsonb related_data
         boolean is_read
         timestamptz created_at
+        timestamptz deleted_at
     }
 
     CONTEXT_SNAPSHOTS {
         uuid id PK
         uuid user_id FK
-        varchar source_type
+        enum source_type
         uuid event_id FK
         uuid transaction_id FK
         uuid input_id FK
@@ -244,9 +287,9 @@ erDiagram
         varchar timezone
         smallint day_of_week
         boolean is_weekend
-        varchar time_bucket
-        varchar weather_condition
-        varchar temperature_bucket
+        enum time_bucket
+        enum weather_condition
+        enum temperature_bucket
         varchar location_text
         varchar location_scene
         varchar activity_scene
@@ -258,8 +301,8 @@ erDiagram
     USER_HABIT_SIGNALS {
         uuid id PK
         uuid user_id FK
-        varchar signal_type
-        varchar subject_type
+        enum signal_type
+        enum subject_type
         varchar subject_value
         jsonb context_filter
         integer evidence_count
@@ -267,7 +310,7 @@ erDiagram
         timestamptz first_observed_at
         timestamptz last_observed_at
         jsonb example_refs
-        varchar status
+        enum status
         timestamptz created_at
         timestamptz updated_at
     }
@@ -276,11 +319,11 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid input_id FK
-        varchar package_type
+        enum package_type
         jsonb context_keys
         jsonb payload_summary
         integer token_estimate
-        varchar privacy_level
+        enum privacy_level
         timestamptz created_at
     }
 
@@ -288,7 +331,7 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid insight_id FK
-        varchar feedback_type
+        enum feedback_type
         text feedback_text
         timestamptz created_at
     }

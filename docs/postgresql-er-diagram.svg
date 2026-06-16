@@ -1,289 +1,173 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1240" viewBox="0 0 1920 1240">
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1120" viewBox="0 0 1700 1120">
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L0,6 L9,3 z" fill="#315f7d"/>
-    </marker>
-    <marker id="arrow-ai" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L0,6 L9,3 z" fill="#2f7d5a"/>
-    </marker>
     <style>
-      .bg { fill: #f7fbff; }
-      .title { font: 700 40px Arial, "PingFang SC", sans-serif; fill: #123047; }
-      .subtitle { font: 500 21px Arial, "PingFang SC", sans-serif; fill: #425466; }
-      .section { font: 700 20px Arial, "PingFang SC", sans-serif; fill: #2d3a45; }
-      .note { font: 15px Arial, "PingFang SC", sans-serif; fill: #596b78; }
-      .box-title { font: 700 17px Arial, "PingFang SC", sans-serif; fill: #172b3a; }
-      .box-subtitle { font: 13px Arial, "PingFang SC", sans-serif; fill: #51606c; }
-      .field { font: 12px Menlo, Consolas, monospace; fill: #263746; }
-      .pk { fill: #d99200; font: 700 11px Arial, sans-serif; }
-      .fk { fill: #7c4bb3; font: 700 11px Arial, sans-serif; }
-      .line { stroke: #315f7d; stroke-width: 2; fill: none; marker-end: url(#arrow); }
-      .line-soft { stroke: #94aec0; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
-      .line-ai { stroke: #2f7d5a; stroke-width: 2; fill: none; stroke-dasharray: 7 5; marker-end: url(#arrow-ai); }
-      .box-user { fill: #eaf5ff; stroke: #5a9ac9; stroke-width: 1.8; }
-      .box-finance { fill: #fff1f4; stroke: #d66e88; stroke-width: 1.8; }
-      .box-schedule { fill: #edf7ff; stroke: #4289bd; stroke-width: 1.8; }
-      .box-tag { fill: #fff8df; stroke: #c49c24; stroke-width: 1.8; }
-      .box-ai { fill: #eefaf2; stroke: #54a474; stroke-width: 1.8; }
-      .box-cache { fill: #fff8e8; stroke: #c59b31; stroke-width: 1.8; }
-      .box-removed { fill: #f4f6f8; stroke: #aab5bd; stroke-width: 1.5; stroke-dasharray: 8 5; }
-      .header-user { fill: #cfe8fb; }
-      .header-finance { fill: #ffdce5; }
-      .header-schedule { fill: #d6ecfb; }
-      .header-tag { fill: #ffefb8; }
-      .header-ai { fill: #d5f1de; }
-      .header-cache { fill: #ffe9aa; }
+      .title { font: 700 34px 'Microsoft YaHei', Arial, sans-serif; fill: #16324f; }
+      .subtitle { font: 400 18px 'Microsoft YaHei', Arial, sans-serif; fill: #516577; }
+      .group-label { font: 700 18px 'Microsoft YaHei', Arial, sans-serif; fill: #16324f; }
+      .box-title { font: 700 18px 'Consolas', 'Courier New', monospace; fill: #17324d; }
+      .box-text { font: 14px 'Consolas', 'Courier New', monospace; fill: #28445c; }
+      .note { font: 14px 'Microsoft YaHei', Arial, sans-serif; fill: #4a6174; }
+      .arrow { stroke: #6b879e; stroke-width: 2.2; fill: none; marker-end: url(#arrowhead); }
     </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b879e" />
+    </marker>
   </defs>
 
-  <rect class="bg" width="1920" height="1240"/>
-  <text class="title" x="44" y="58">我在 · PostgreSQL 数据库架构图</text>
-  <text class="subtitle" x="46" y="94">个人日程 + 个人记账 + AI 输入解析 + 情境习惯检索 + 统计缓存</text>
+  <rect width="1700" height="1120" fill="#f6f8fb" />
+  <text x="36" y="50" class="title">我在 · PostgreSQL 数据库架构图（最终版）</text>
+  <text x="36" y="82" class="subtitle">个人日程 + 个人记账 + AI 输入解析 + 情境检索 + 习惯画像 + 手机号登录</text>
 
-  <text class="section" x="44" y="145">AI 与情境上下文</text>
-  <text class="section" x="420" y="145">用户与主数据</text>
-  <text class="section" x="820" y="145">日程与记账主链路</text>
-  <text class="section" x="1288" y="145">统计、预算与设置</text>
+  <rect x="36" y="118" width="320" height="160" rx="18" fill="#ffffff" stroke="#cfd9e4" stroke-width="2"/>
+  <text x="58" y="152" class="group-label">本版边界</text>
+  <text x="58" y="188" class="note">做：手机号登录、日程、记账、AI 审计、习惯建议</text>
+  <text x="58" y="218" class="note">不做：多账户钱包、转账、多人分账、日程参与者</text>
+  <text x="58" y="248" class="note">说明：spending_summaries 为统计缓存，云端 Agent 不直连数据库</text>
 
-  <!-- AI column -->
-  <g id="ai_inputs">
-    <rect class="box-ai" x="44" y="175" width="310" height="160" rx="12"/>
-    <path class="header-ai" d="M56 175h286a12 12 0 0 1 12 12v34H44v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="64" y="199">ai_inputs</text><text class="box-subtitle" x="190" y="199">AI 输入记录</text>
-    <text class="pk" x="64" y="237">PK</text><text class="field" x="94" y="237">id UUID</text>
-    <text class="fk" x="64" y="260">FK</text><text class="field" x="94" y="260">user_id UUID</text>
-    <text class="field" x="64" y="283">input_type text/voice/image</text>
-    <text class="field" x="64" y="306">content / raw_text / image_url</text>
-    <text class="field" x="64" y="329">recognized_json JSONB</text>
-  </g>
+  <text x="390" y="128" class="group-label">用户与认证</text>
+  <rect x="390" y="148" width="250" height="168" rx="16" fill="#e9f6ff" stroke="#63b3ed" stroke-width="2"/>
+  <text x="410" y="178" class="box-title">users</text>
+  <text x="410" y="208" class="box-text">PK id UUID</text>
+  <text x="410" y="230" class="box-text">username VARCHAR(50)</text>
+  <text x="410" y="252" class="box-text">phone VARCHAR(20) UNIQUE</text>
+  <text x="410" y="274" class="box-text">email CITEXT NULL</text>
+  <text x="410" y="296" class="box-text">last_login_at / created_at / updated_at</text>
 
-  <g id="ai_extractions">
-    <rect class="box-ai" x="44" y="370" width="310" height="145" rx="12"/>
-    <path class="header-ai" d="M56 370h286a12 12 0 0 1 12 12v34H44v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="64" y="394">ai_extractions</text><text class="box-subtitle" x="210" y="394">AI 解析结果</text>
-    <text class="pk" x="64" y="432">PK</text><text class="field" x="94" y="432">id UUID</text>
-    <text class="fk" x="64" y="455">FK</text><text class="field" x="94" y="455">input_id UUID</text>
-    <text class="field" x="64" y="478">entity_type event/transaction/task</text>
-    <text class="field" x="64" y="501">parsed_data JSONB / confidence</text>
-  </g>
+  <rect x="675" y="120" width="280" height="160" rx="16" fill="#e9f6ff" stroke="#63b3ed" stroke-width="2"/>
+  <text x="695" y="150" class="box-title">auth_verification_codes</text>
+  <text x="695" y="180" class="box-text">PK id UUID</text>
+  <text x="695" y="202" class="box-text">FK user_id UUID NULL</text>
+  <text x="695" y="224" class="box-text">phone / purpose / channel</text>
+  <text x="695" y="246" class="box-text">code_hash / expires_at / consumed_at</text>
+  <text x="695" y="268" class="box-text">attempt_count / status / created_at</text>
 
-  <g id="context_snapshots">
-    <rect class="box-ai" x="44" y="550" width="310" height="252" rx="12"/>
-    <path class="header-ai" d="M56 550h286a12 12 0 0 1 12 12v34H44v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="64" y="574">context_snapshots</text><text class="box-subtitle" x="230" y="574">情境快照</text>
-    <text class="pk" x="64" y="612">PK</text><text class="field" x="94" y="612">id UUID</text>
-    <text class="fk" x="64" y="635">FK</text><text class="field" x="94" y="635">user_id UUID</text>
-    <text class="field" x="64" y="658">source_type event/transaction/ai_input</text>
-    <text class="field" x="64" y="681">event_id / transaction_id / input_id</text>
-    <text class="field" x="64" y="704">occurred_at / date_local / timezone</text>
-    <text class="field" x="64" y="727">day_of_week / is_weekend / time_bucket</text>
-    <text class="field" x="64" y="750">weather_condition / temperature_bucket</text>
-    <text class="field" x="64" y="773">location_scene / activity_scene / mood</text>
-    <text class="field" x="64" y="796">features JSONB</text>
-  </g>
+  <rect x="985" y="120" width="280" height="160" rx="16" fill="#e9f6ff" stroke="#63b3ed" stroke-width="2"/>
+  <text x="1005" y="150" class="box-title">user_sessions</text>
+  <text x="1005" y="180" class="box-text">PK id UUID</text>
+  <text x="1005" y="202" class="box-text">FK user_id UUID</text>
+  <text x="1005" y="224" class="box-text">session_token_hash</text>
+  <text x="1005" y="246" class="box-text">device_id / client_platform / app_version</text>
+  <text x="1005" y="268" class="box-text">expires_at / revoked_at / last_seen_at</text>
 
-  <g id="user_habit_signals">
-    <rect class="box-ai" x="44" y="837" width="310" height="205" rx="12"/>
-    <path class="header-ai" d="M56 837h286a12 12 0 0 1 12 12v34H44v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="64" y="861">user_habit_signals</text><text class="box-subtitle" x="235" y="861">习惯证据</text>
-    <text class="pk" x="64" y="899">PK</text><text class="field" x="94" y="899">id UUID</text>
-    <text class="fk" x="64" y="922">FK</text><text class="field" x="94" y="922">user_id UUID</text>
-    <text class="field" x="64" y="945">signal_type / subject_type</text>
-    <text class="field" x="64" y="968">subject_value VARCHAR(100)</text>
-    <text class="field" x="64" y="991">context_filter JSONB</text>
-    <text class="field" x="64" y="1014">evidence_count / confidence / status</text>
-  </g>
+  <rect x="1295" y="120" width="330" height="190" rx="16" fill="#e9f6ff" stroke="#63b3ed" stroke-width="2"/>
+  <text x="1315" y="150" class="box-title">user_preferences / user_financial_profiles</text>
+  <text x="1315" y="182" class="box-text">PK/FK user_id UUID</text>
+  <text x="1315" y="204" class="box-text">currency / timezone / default_view</text>
+  <text x="1315" y="226" class="box-text">reminder_setting JSONB</text>
+  <text x="1315" y="248" class="box-text">initial_balance / current_balance</text>
+  <text x="1315" y="270" class="box-text">通知设置独立在 notification_settings</text>
 
-  <g id="ai_context_packages">
-    <rect class="box-ai" x="44" y="1074" width="310" height="130" rx="12"/>
-    <path class="header-ai" d="M56 1074h286a12 12 0 0 1 12 12v34H44v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="64" y="1098">ai_context_packages</text><text class="box-subtitle" x="240" y="1098">云端上下文包</text>
-    <text class="pk" x="64" y="1136">PK</text><text class="field" x="94" y="1136">id UUID</text>
-    <text class="fk" x="64" y="1159">FK</text><text class="field" x="94" y="1159">user_id / input_id</text>
-    <text class="field" x="64" y="1182">context_keys / payload_summary</text>
-  </g>
+  <text x="380" y="370" class="group-label">日程域</text>
+  <rect x="380" y="392" width="320" height="240" rx="16" fill="#e7f0fb" stroke="#6996c8" stroke-width="2"/>
+  <text x="402" y="424" class="box-title">events</text>
+  <text x="402" y="454" class="box-text">PK id UUID / FK user_id UUID</text>
+  <text x="402" y="476" class="box-text">title / description / location / color</text>
+  <text x="402" y="498" class="box-text">all_day BOOLEAN</text>
+  <text x="402" y="520" class="box-text">start_date / end_date</text>
+  <text x="402" y="542" class="box-text">start_at / end_at / timezone</text>
+  <text x="402" y="564" class="box-text">event_type schedule/todo</text>
+  <text x="402" y="586" class="box-text">priority / status / recurrence_rule</text>
+  <text x="402" y="608" class="box-text">source_input_id / deleted_at</text>
 
-  <!-- user column -->
-  <g id="users">
-    <rect class="box-user" x="420" y="175" width="320" height="160" rx="12"/>
-    <path class="header-user" d="M432 175h296a12 12 0 0 1 12 12v34H420v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="440" y="199">users</text><text class="box-subtitle" x="560" y="199">用户</text>
-    <text class="pk" x="440" y="237">PK</text><text class="field" x="470" y="237">id UUID</text>
-    <text class="field" x="440" y="260">username VARCHAR(50)</text>
-    <text class="field" x="440" y="283">phone / email UNIQUE</text>
-    <text class="field" x="440" y="306">avatar_url / created_at / updated_at</text>
-  </g>
+  <rect x="735" y="392" width="250" height="168" rx="16" fill="#e7f0fb" stroke="#6996c8" stroke-width="2"/>
+  <text x="755" y="424" class="box-title">event_reminders</text>
+  <text x="755" y="454" class="box-text">PK id / FK user_id / FK event_id</text>
+  <text x="755" y="476" class="box-text">remind_at TIMESTAMPTZ</text>
+  <text x="755" y="498" class="box-text">method push/email/sms/voice</text>
+  <text x="755" y="520" class="box-text">is_sent / created_at</text>
 
-  <g id="user_preferences">
-    <rect class="box-user" x="420" y="370" width="320" height="145" rx="12"/>
-    <path class="header-user" d="M432 370h296a12 12 0 0 1 12 12v34H420v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="440" y="394">user_preferences</text><text class="box-subtitle" x="600" y="394">用户偏好</text>
-    <text class="pk" x="440" y="432">PK/FK</text><text class="field" x="490" y="432">user_id UUID</text>
-    <text class="field" x="440" y="455">currency / timezone / default_view</text>
-    <text class="field" x="440" y="478">reminder_setting JSONB</text>
-  </g>
+  <rect x="1020" y="392" width="250" height="150" rx="16" fill="#fff8de" stroke="#d7a11f" stroke-width="2"/>
+  <text x="1040" y="424" class="box-title">tags</text>
+  <text x="1040" y="454" class="box-text">PK id / FK user_id</text>
+  <text x="1040" y="476" class="box-text">name / color</text>
+  <text x="1040" y="498" class="box-text">updated_at / deleted_at</text>
 
-  <g id="user_financial_profiles">
-    <rect class="box-user" x="420" y="550" width="320" height="145" rx="12"/>
-    <path class="header-user" d="M432 550h296a12 12 0 0 1 12 12v34H420v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="440" y="574">user_financial_profiles</text><text class="box-subtitle" x="645" y="574">总金额</text>
-    <text class="pk" x="440" y="612">PK/FK</text><text class="field" x="490" y="612">user_id UUID</text>
-    <text class="field" x="440" y="635">currency VARCHAR(10)</text>
-    <text class="field" x="440" y="658">initial_balance / current_balance</text>
-    <text class="field" x="440" y="681">由交易流水统一维护</text>
-  </g>
+  <rect x="1305" y="392" width="300" height="150" rx="16" fill="#fff8de" stroke="#d7a11f" stroke-width="2"/>
+  <text x="1325" y="424" class="box-title">event_tags</text>
+  <text x="1325" y="454" class="box-text">FK user_id</text>
+  <text x="1325" y="476" class="box-text">PK/FK event_id</text>
+  <text x="1325" y="498" class="box-text">PK/FK tag_id / created_at</text>
 
-  <g id="categories">
-    <rect class="box-finance" x="420" y="730" width="320" height="160" rx="12"/>
-    <path class="header-finance" d="M432 730h296a12 12 0 0 1 12 12v34H420v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="440" y="754">categories</text><text class="box-subtitle" x="575" y="754">分类</text>
-    <text class="pk" x="440" y="792">PK</text><text class="field" x="470" y="792">id UUID</text>
-    <text class="fk" x="440" y="815">FK</text><text class="field" x="470" y="815">user_id / parent_id</text>
-    <text class="field" x="440" y="838">name / type income/expense/both</text>
-    <text class="field" x="440" y="861">icon / color</text>
-  </g>
+  <text x="378" y="690" class="group-label">记账域</text>
+  <rect x="378" y="712" width="260" height="188" rx="16" fill="#ffe8e8" stroke="#ef6f6f" stroke-width="2"/>
+  <text x="400" y="744" class="box-title">categories</text>
+  <text x="400" y="774" class="box-text">PK id / FK user_id / parent_id</text>
+  <text x="400" y="796" class="box-text">name / type income-expense-both</text>
+  <text x="400" y="818" class="box-text">icon / color</text>
+  <text x="400" y="840" class="box-text">updated_at / deleted_at</text>
+  <text x="400" y="862" class="box-text">唯一性按 user_id + name + type + 未删除</text>
 
-  <g id="tags">
-    <rect class="box-tag" x="420" y="925" width="320" height="145" rx="12"/>
-    <path class="header-tag" d="M432 925h296a12 12 0 0 1 12 12v34H420v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="440" y="949">tags</text><text class="box-subtitle" x="575" y="949">统一标签</text>
-    <text class="pk" x="440" y="987">PK</text><text class="field" x="470" y="987">id UUID</text>
-    <text class="fk" x="440" y="1010">FK</text><text class="field" x="470" y="1010">user_id UUID</text>
-    <text class="field" x="440" y="1033">name / color / created_at</text>
-  </g>
+  <rect x="670" y="682" width="360" height="250" rx="16" fill="#ffe8e8" stroke="#ef6f6f" stroke-width="2"/>
+  <text x="692" y="714" class="box-title">transactions</text>
+  <text x="692" y="744" class="box-text">PK id / FK user_id</text>
+  <text x="692" y="766" class="box-text">event_id NULL / category_id NULL</text>
+  <text x="692" y="788" class="box-text">type income/expense</text>
+  <text x="692" y="810" class="box-text">amount &gt; 0 / currency</text>
+  <text x="692" y="832" class="box-text">description / payment_method / location</text>
+  <text x="692" y="854" class="box-text">occurred_at / is_manual</text>
+  <text x="692" y="876" class="box-text">source_input_id / deleted_at</text>
+  <text x="692" y="898" class="box-text">记账与日程分离，只通过 event_id 可选关联</text>
 
-  <!-- core chain -->
-  <g id="events">
-    <rect class="box-schedule" x="820" y="175" width="370" height="255" rx="12"/>
-    <path class="header-schedule" d="M832 175h346a12 12 0 0 1 12 12v34H820v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="840" y="199">events</text><text class="box-subtitle" x="965" y="199">日程 / 待办</text>
-    <text class="pk" x="840" y="237">PK</text><text class="field" x="870" y="237">id UUID</text>
-    <text class="fk" x="840" y="260">FK</text><text class="field" x="870" y="260">user_id UUID</text>
-    <text class="field" x="840" y="283">title / description / location / color</text>
-    <text class="field" x="840" y="306">all_day BOOLEAN</text>
-    <text class="field" x="840" y="329">start_date/end_date for all-day</text>
-    <text class="field" x="840" y="352">start_at/end_at for timed event</text>
-    <text class="field" x="840" y="375">event_type schedule/todo</text>
-    <text class="field" x="840" y="398">priority / status / recurrence_rule</text>
-    <text class="field" x="840" y="421">source_input_id / deleted_at</text>
-  </g>
+  <rect x="1060" y="682" width="260" height="150" rx="16" fill="#fff8de" stroke="#d7a11f" stroke-width="2"/>
+  <text x="1082" y="714" class="box-title">transaction_tags</text>
+  <text x="1082" y="744" class="box-text">FK user_id</text>
+  <text x="1082" y="766" class="box-text">PK/FK transaction_id</text>
+  <text x="1082" y="788" class="box-text">PK/FK tag_id / created_at</text>
 
-  <g id="transactions">
-    <rect class="box-finance" x="820" y="468" width="370" height="232" rx="12"/>
-    <path class="header-finance" d="M832 468h346a12 12 0 0 1 12 12v34H820v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="840" y="492">transactions</text><text class="box-subtitle" x="990" y="492">交易流水</text>
-    <text class="pk" x="840" y="530">PK</text><text class="field" x="870" y="530">id UUID</text>
-    <text class="fk" x="840" y="553">FK</text><text class="field" x="870" y="553">user_id / event_id / category_id</text>
-    <text class="field" x="840" y="576">type income/expense</text>
-    <text class="field" x="840" y="599">amount NUMERIC(14,2) / currency</text>
-    <text class="field" x="840" y="622">description / payment_method / location</text>
-    <text class="field" x="840" y="645">occurred_at / is_manual</text>
-    <text class="field" x="840" y="668">source_input_id / deleted_at</text>
-    <text class="note" x="840" y="692">无 account_id，无 transfer</text>
-  </g>
+  <rect x="1350" y="662" width="290" height="220" rx="16" fill="#fff0d8" stroke="#d7a11f" stroke-width="2"/>
+  <text x="1372" y="694" class="box-title">budgets / financial_goals / spending_summaries</text>
+  <text x="1372" y="724" class="box-text">budgets: period / limit_amount / alert_threshold</text>
+  <text x="1372" y="746" class="box-text">financial_goals: target_amount / current_amount</text>
+  <text x="1372" y="768" class="box-text">spending_summaries: period_type / totals / balance</text>
+  <text x="1372" y="790" class="box-text">category_breakdown JSONB</text>
+  <text x="1372" y="812" class="box-text">其中 spending_summaries 为统计缓存</text>
+  <text x="1372" y="834" class="box-text">current_balance 统一在 user_financial_profiles 维护</text>
 
-  <g id="event_reminders">
-    <rect class="box-schedule" x="820" y="735" width="370" height="130" rx="12"/>
-    <path class="header-schedule" d="M832 735h346a12 12 0 0 1 12 12v34H820v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="840" y="759">event_reminders</text><text class="box-subtitle" x="1015" y="759">单用户日程提醒</text>
-    <text class="pk" x="840" y="797">PK</text><text class="field" x="870" y="797">id UUID</text>
-    <text class="fk" x="840" y="820">FK</text><text class="field" x="870" y="820">user_id / event_id</text>
-    <text class="field" x="840" y="843">remind_at / method / is_sent</text>
-  </g>
+  <text x="44" y="360" class="group-label">AI 与上下文</text>
+  <rect x="44" y="392" width="280" height="160" rx="16" fill="#eaf0da" stroke="#6bb06b" stroke-width="2"/>
+  <text x="66" y="424" class="box-title">ai_inputs</text>
+  <text x="66" y="454" class="box-text">PK id / FK user_id</text>
+  <text x="66" y="476" class="box-text">input_type text-voice-image</text>
+  <text x="66" y="498" class="box-text">content / raw_text / image_url</text>
+  <text x="66" y="520" class="box-text">recognized_json / created_at</text>
 
-  <g id="tag_bridges">
-    <rect class="box-tag" x="820" y="900" width="370" height="145" rx="12"/>
-    <path class="header-tag" d="M832 900h346a12 12 0 0 1 12 12v34H820v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="840" y="924">event_tags / transaction_tags</text><text class="box-subtitle" x="1060" y="924">标签桥接</text>
-    <text class="fk" x="840" y="962">FK</text><text class="field" x="870" y="962">user_id UUID</text>
-    <text class="field" x="840" y="985">event_id + tag_id</text>
-    <text class="field" x="840" y="1008">transaction_id + tag_id</text>
-    <text class="field" x="840" y="1031">用于日程和交易的多对多标签</text>
-  </g>
+  <rect x="44" y="580" width="280" height="150" rx="16" fill="#eaf0da" stroke="#6bb06b" stroke-width="2"/>
+  <text x="66" y="612" class="box-title">ai_extractions</text>
+  <text x="66" y="642" class="box-text">PK id / FK input_id</text>
+  <text x="66" y="664" class="box-text">entity_type event-transaction-task</text>
+  <text x="66" y="686" class="box-text">parsed_data / confidence</text>
 
-  <!-- right column -->
-  <g id="notification_settings">
-    <rect class="box-user" x="1288" y="175" width="355" height="145" rx="12"/>
-    <path class="header-user" d="M1300 175h331a12 12 0 0 1 12 12v34h-355v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="1308" y="199">notification_settings</text><text class="box-subtitle" x="1505" y="199">通知设置</text>
-    <text class="pk" x="1308" y="237">PK</text><text class="field" x="1338" y="237">id UUID</text>
-    <text class="fk" x="1308" y="260">FK</text><text class="field" x="1338" y="260">user_id UUID</text>
-    <text class="field" x="1308" y="283">channel / quiet_start / quiet_end / enabled</text>
-  </g>
+  <rect x="44" y="760" width="280" height="160" rx="16" fill="#eaf0da" stroke="#6bb06b" stroke-width="2"/>
+  <text x="66" y="792" class="box-title">ai_insights</text>
+  <text x="66" y="822" class="box-text">PK id / FK user_id</text>
+  <text x="66" y="844" class="box-text">insight_type / title / content</text>
+  <text x="66" y="866" class="box-text">related_data / is_read / deleted_at</text>
 
-  <g id="financial_goals">
-    <rect class="box-cache" x="1288" y="355" width="355" height="145" rx="12"/>
-    <path class="header-cache" d="M1300 355h331a12 12 0 0 1 12 12v34h-355v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="1308" y="379">financial_goals</text><text class="box-subtitle" x="1460" y="379">财务目标</text>
-    <text class="pk" x="1308" y="417">PK</text><text class="field" x="1338" y="417">id UUID</text>
-    <text class="fk" x="1308" y="440">FK</text><text class="field" x="1338" y="440">user_id UUID</text>
-    <text class="field" x="1308" y="463">target_amount / current_amount / status</text>
-  </g>
+  <rect x="44" y="948" width="460" height="142" rx="16" fill="#eaf0da" stroke="#6bb06b" stroke-width="2"/>
+  <text x="66" y="980" class="box-title">context_snapshots / user_habit_signals / ai_context_packages / ai_recommendation_feedback</text>
+  <text x="66" y="1010" class="box-text">context_snapshots: weather_condition / time_bucket / location_scene / activity_scene / features</text>
+  <text x="66" y="1032" class="box-text">user_habit_signals: signal_type / subject_value / context_filter / evidence_count / confidence</text>
+  <text x="66" y="1054" class="box-text">ai_context_packages: package_type / context_keys / payload_summary / privacy_level</text>
+  <text x="66" y="1076" class="box-text">ai_recommendation_feedback: feedback_type / feedback_text</text>
 
-  <g id="budgets">
-    <rect class="box-cache" x="1288" y="535" width="355" height="145" rx="12"/>
-    <path class="header-cache" d="M1300 535h331a12 12 0 0 1 12 12v34h-355v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="1308" y="559">budgets</text><text class="box-subtitle" x="1425" y="559">预算</text>
-    <text class="pk" x="1308" y="597">PK</text><text class="field" x="1338" y="597">id UUID</text>
-    <text class="fk" x="1308" y="620">FK</text><text class="field" x="1338" y="620">user_id / category_id</text>
-    <text class="field" x="1308" y="643">period / start_date / end_date</text>
-    <text class="field" x="1308" y="666">limit_amount / alert_threshold</text>
-  </g>
+  <path class="arrow" d="M640 232 C655 232, 670 220, 675 210" />
+  <path class="arrow" d="M640 242 C770 250, 920 250, 985 230" />
+  <path class="arrow" d="M640 272 C840 310, 1190 280, 1295 220" />
+  <path class="arrow" d="M540 316 C540 345, 540 360, 540 392" />
+  <path class="arrow" d="M541 632 C620 700, 680 730, 730 748" />
+  <path class="arrow" d="M184 552 C184 570, 184 580, 184 580" />
+  <path class="arrow" d="M184 730 C184 742, 184 760, 184 760" />
+  <path class="arrow" d="M284 470 C330 470, 350 470, 380 470" />
+  <path class="arrow" d="M286 670 C410 706, 560 742, 670 782" />
+  <path class="arrow" d="M700 470 C720 470, 735 470, 735 470" />
+  <path class="arrow" d="M700 540 C840 590, 940 610, 1020 468" />
+  <path class="arrow" d="M1120 542 C1210 548, 1270 520, 1305 488" />
+  <path class="arrow" d="M640 808 C652 808, 670 808, 670 808" />
+  <path class="arrow" d="M1030 808 C1040 808, 1060 808, 1060 808" />
+  <path class="arrow" d="M1030 766 C1140 740, 1240 720, 1350 722" />
+  <path class="arrow" d="M520 1020 C640 1020, 640 1020, 760 980" />
+  <path class="arrow" d="M960 980 C1010 980, 1040 980, 1040 980" />
+  <path class="arrow" d="M1320 980 C1370 980, 1400 980, 1400 980" />
 
-  <g id="spending_summaries">
-    <rect class="box-cache" x="1288" y="715" width="355" height="165" rx="12"/>
-    <path class="header-cache" d="M1300 715h331a12 12 0 0 1 12 12v34h-355v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="1308" y="739">spending_summaries</text><text class="box-subtitle" x="1500" y="739">统计缓存</text>
-    <text class="pk" x="1308" y="777">PK</text><text class="field" x="1338" y="777">id UUID</text>
-    <text class="fk" x="1308" y="800">FK</text><text class="field" x="1338" y="800">user_id UUID</text>
-    <text class="field" x="1308" y="823">period_type / period_start / period_end</text>
-    <text class="field" x="1308" y="846">total_income / total_expense / balance</text>
-    <text class="field" x="1308" y="869">category_breakdown JSONB</text>
-  </g>
-
-  <g id="ai_insights">
-    <rect class="box-ai" x="1288" y="915" width="355" height="145" rx="12"/>
-    <path class="header-ai" d="M1300 915h331a12 12 0 0 1 12 12v34h-355v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="1308" y="939">ai_insights</text><text class="box-subtitle" x="1435" y="939">AI 洞察/建议</text>
-    <text class="pk" x="1308" y="977">PK</text><text class="field" x="1338" y="977">id UUID</text>
-    <text class="fk" x="1308" y="1000">FK</text><text class="field" x="1338" y="1000">user_id UUID</text>
-    <text class="field" x="1308" y="1023">insight_type / title / content / related_data</text>
-  </g>
-
-  <g id="ai_recommendation_feedback">
-    <rect class="box-ai" x="1288" y="1095" width="355" height="110" rx="12"/>
-    <path class="header-ai" d="M1300 1095h331a12 12 0 0 1 12 12v34h-355v-34a12 12 0 0 1 12-12z"/>
-    <text class="box-title" x="1308" y="1119">ai_recommendation_feedback</text><text class="box-subtitle" x="1535" y="1119">建议反馈</text>
-    <text class="pk" x="1308" y="1157">PK</text><text class="field" x="1338" y="1157">id UUID</text>
-    <text class="fk" x="1308" y="1180">FK</text><text class="field" x="1338" y="1180">user_id / insight_id / feedback_type</text>
-  </g>
-
-  <!-- relationship lines -->
-  <path class="line-soft" d="M740 245 C780 245 780 255 820 255"/>
-  <path class="line-soft" d="M740 445 C760 445 790 330 820 330"/>
-  <path class="line-soft" d="M740 615 C770 615 790 600 820 600"/>
-  <path class="line-soft" d="M740 810 C770 810 790 570 820 570"/>
-  <path class="line-soft" d="M740 997 C785 990 790 985 820 985"/>
-  <path class="line-soft" d="M1190 310 C1250 330 1250 605 1288 605"/>
-  <path class="line-soft" d="M1190 585 C1235 585 1245 790 1288 790"/>
-  <path class="line" d="M1010 430 C1010 448 1010 450 1010 468"/>
-  <path class="line" d="M1010 700 C1010 720 1010 720 1010 735"/>
-  <path class="line" d="M1010 700 C1010 820 1010 860 1010 900"/>
-  <path class="line" d="M1190 575 C1235 575 1245 640 1288 640"/>
-
-  <path class="line-ai" d="M354 255 C520 255 650 245 820 245"/>
-  <path class="line-ai" d="M354 278 C520 360 650 525 820 545"/>
-  <path class="line-ai" d="M199 335 C199 350 199 355 199 370"/>
-  <path class="line-ai" d="M354 255 C1170 185 1180 970 1288 970"/>
-  <path class="line-ai" d="M354 635 C585 560 610 360 820 360"/>
-  <path class="line-ai" d="M354 665 C575 665 650 630 820 630"/>
-  <path class="line-ai" d="M199 802 C199 820 199 820 199 837"/>
-  <path class="line-ai" d="M354 1140 C750 1110 955 990 1288 990"/>
-  <path class="line-ai" d="M1643 990 C1695 990 1695 1150 1643 1150"/>
-
-  <!-- privacy/removed note -->
-  <rect class="box-removed" x="420" y="1105" width="770" height="88" rx="12"/>
-  <text class="section" x="445" y="1138">本版明确不建表</text>
-  <text class="note" x="445" y="1168">accounts 多账户、transactions.transfer 转账、transaction_splits 多人分账/拆分、event_participants 日程参与人。</text>
-  <text class="note" x="445" y="1188">云端 Agent 不直连数据库；后端/端侧检索并打包最小必要上下文。</text>
+  <text x="1100" y="1015" class="note">AI 只产出候选结果，最终仍由后端校验后写入 events / transactions</text>
 </svg>
