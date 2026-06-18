@@ -1,0 +1,16 @@
+{
+  "name": "nowme-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PostgreSQL backend service for the NowMe Quick App",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "migrate": "node scripts/migrate.js",
+    "check": "node --check src/server.js && node --check src/app.js && node --check scripts/migrate.js"
+  },
+  "dependencies": {
+    "express": "^4.22.1",
+    "pg": "^8.13.1"
+  }
+}
